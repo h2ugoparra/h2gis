@@ -119,6 +119,10 @@ Contributions are welcome! Please feel free to submit issues or pull requests on
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## AI Assistance
+
+Parts of this codebase were developed with the help of [Claude](https://claude.ai) (Anthropic).
+
 ## Acknowledgments
 
 This project was developed under the framework of [COSTA project](https://costaproject.org/en/). This project relies on data from Copernicus Marine Service, AVISO, Copernicus Climate Data Store, and NOAA NCEI. We gratefully acknowledge these organizations for providing open access to their datasets.
