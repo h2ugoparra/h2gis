@@ -1,0 +1,619 @@
+# -----------------------
+# Spatial Parameters
+# -----------------------
+spatial:
+  geo_extent: [-80, 0, 10, 70]
+  depth_range: [0, 1000]  # for o2 variables
+  dx: 0.25
+  dy: 0.25
+
+# -----------------------
+# Variable Configurations
+# -----------------------
+variables:
+  sst:
+    local_folder: CMEMS_SST
+    variables: [analysed_sst, analysis_error]
+    dataset_id_rep: METOFFICE-GLO-SST-L4-REP-OBS-SST
+    dataset_id_nrt: METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2
+    source: cmems
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2}) #(\d{8})* Check this because it was original files pattern
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  ssh:
+    local_folder: CMEMS_SSH
+    variables: [adt, sla, ugos, vgos]
+    dataset_id_rep: cmems_obs-sl_glo_phy-ssh_my_allsat-l4-duacs-0.125deg_P1D
+    dataset_id_nrt: cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D
+    source: cmems
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2}) 
+    subset: true
+    bbox: [-180, -90, 180, 90]
+
+  mld:
+    local_folder: CMEMS_MLD
+    variables: [mlotst]
+    dataset_id_rep: cmems_mod_glo_phy_my_0.083deg_P1D-m
+    source: cmems
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  chl:
+    local_folder: CMEMS_Chla_4km_daily
+    variables: [CHL]
+    dataset_id_rep: cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
+    source: cmems
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  seapodym:
+    local_folder: CMEMS_2nd_productivity/mnkc
+    variables: [mnkc_epi, mnkc_umeso, mnkc_mumeso, npp, zooc, zeu]
+    dataset_id_rep: cmems_mod_glo_bgc_my_0.083deg-lmtl_P1D-i
+    source: cmems
+    pattern: (\d{8})
+    subset: false
+    bbox: [-180, -80, 180, 90]
+
+  o2:
+    local_folder: CMEMS_Biochemical
+    variables: [o2]
+    dataset_id_rep: cmems_mod_glo_bgc_my_0.25deg_P1D-m
+    source: cmems
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+    depth_range: [0, 1000]
+    
+  fsle:
+    local_folder: AVISO_FSLE
+    variables: [fsle_max]
+    dataset_id_rep: /value-added/lyapunov/delayed-time/global
+    dataset_id_nrt: /value-added/lyapunov/near-real-time/global
+    source: aviso
+    pattern: _(\d{8})_*
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  eddies:
+    local_folder: AVISO_Eddy_Trajectory
+    variables: [
+      time, 
+      latitude , 
+      longitude , 
+      track , 
+      observation_number , 
+      effective_radius, 
+      speed_radius, 
+      amplitude , 
+      speed_average
+      ]
+    dataset_id_rep: /value-added/eddy-trajectory/delayed-time/META3.2_DT_allsat
+    dataset_id_nrt: /value-added/eddy-trajectory/near-real-time
+    source: aviso
+    pattern: (\d{8})_(\d{8})
+    bbox: [-80, 0, 10, 70]
+  
+  atm-instante:
+    local_folder: CDS_Atm_instante
+    variables: [
+      mean_sea_level_pressure,
+      10m_u_component_of_wind,
+      10m_v_component_of_wind,
+      total_cloud_cover,  
+      ]
+    dataset_id_rep: reanalysis-era5-single-levels
+    source: cds
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  atm-accum-avg:
+    local_folder: CDS_Atm_accum
+    variables: [
+      total_precipitation,
+      mean_northward_turbulent_surface_stress,
+      mean_eastward_turbulent_surface_stress,   
+      ]
+    dataset_id_rep: reanalysis-era5-single-levels
+    source: cds
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  radiation:
+    local_folder: CDS_Radiation
+    variables: [
+      surface_latent_heat_flux,
+      surface_solar_radiation_downwards,
+      toa_incident_solar_radiation,
+      ]
+    dataset_id_rep: reanalysis-era5-single-levels
+    source: cds
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  waves:
+    local_folder: CDS_Waves
+    variables: [
+      significant_height_of_combined_wind_waves_and_swell,
+      mean_direction_of_total_swell,
+      ]
+    dataset_id_rep: reanalysis-era5-single-levels
+    source: cds
+    pattern: (\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  bathy:
+    local_folder: ETOPO_Topography
+    variables: [z]
+    dataset_id_rep: Etopo_v1
+    source: noaa
+    pattern: ()
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+  moon:
+    local_folder: MOON_Phases
+    variables: [moon_phase]
+    dataset_id_rep: ephem4.2
+    source: python
+    pattern: ()
+    subset: true
+
+  h2ds:
+    local_folder: h2ds
+    variables: []
+    dataset_id_rep: compiled-data-0.25deg-P1D
+    source: h2gis
+    pattern: ()
+    subset: true
+    bbox: [-80, 0, 10, 70]
+
+
+global_attrs:
+  title: h2ds - Integrated Geospatial Dataset Collection for the North Atlantic
+  source: Various reanalysis and observational datasets from CMEMS/AVISO/NCEI-ETOPO/CDS-ERA5
+  project: h2gis - Geospatial Processing for Climate and Ocean Data
+  creator_name: Hugo Parra
+  creator_email: h2ugo.parra@pm.me
+  date_created: '2024-06-12'
+  geospatial_lat_resolution: 0.25
+  geospatial_lat_units: degrees_north
+  geospatial_lon_resolution: 0.25
+  geospatial_lon_units: degrees_east
+  time_coverage_resolution: P1D
+  comments: For variables with less than 0.25 spatial resolution (all except o2), upscalling was done using xarray interp function with linear method
+  products ID:
+    ssh_rep: SEALEVEL_GLO_PHY_L4_MY_008_047/cmems_obs-sl_glo_phy-ssh_my_allsat-l4-duacs-0.125deg_P1D
+    ssh_nrt: SEALEVEL_GLO_PHY_L4_NRT_008_046/cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D
+    sst_rep: SST_GLO_SST_L4_REP_Observations_010_011/METOFFICE-GLO-SST-L4-REP-OBS-SST
+    sst_nrt: SST_GLO_SST_L4_NRT_Observations_010_001/METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2 
+    o2: GLOBAL_MULTIYEAR_BGC_001_029/cmems_mod_glo_bgc_my_0.25deg_P1D-m 
+    mld: GLOBAL_MULTIYEAR_PHY_001_030/cmems_mod_glo_phy_my_0.083deg_P1D-m
+    chl: OCEANCOLOUR_GLO_BGC_L4_MY_009_104/cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
+    seapodym: GLOBAL_MULTIYEAR_BGC_001_033/cmems_mod_glo_bgc_my_0.083deg-lmtl_PT1D-i
+    eddies: ftp://ftp-access-aviso.altimetry.fr/value-added/eddy-trajectory/delayed-time/META3.2_DT_allsat
+    fsle: ftp://ftp-access-aviso.altimetry.fr/value-added/lyapunov/delayed-time/global
+    bathy: ETOPO 2022 v1 15arc-secs
+    moon_phase: ephem 4.2 python package
+    front_distances: Derived from sst and chl using Belkin and O'Reilly (2009) method and thresholds values from literature
+    atm-instante: ERA5 reanalysis - reanalysis-era5-single-levels
+    atm-accum-avg: ERA5 reanalysis - reanalysis-era5-single-level
+    radiation: ERA5 reanalysis - reanalysis-era5-single-levels
+    waves: ERA5 reanalysis - reanalysis-era5-single-levels
+
+variable_attrs:
+# SST
+  sst:
+    short_name: SST
+    long_name: Analysed sea surface temperature
+    units: degrees Celsius
+  
+  sst_std:
+    short_name: SST Std
+    long_name: Standard deviation of analysed sea surface temperature
+    units: degrees Celsius
+    description: Derived from a rolling mean (3*3 cells) from sst native resolution
+  
+  sst_fdist:
+    short_name: SST FrontDist
+    long_name: Distance to nearest SST front
+    units: km
+    description: Front detection using the Belkin and OReilly (2009) method and athreshold value of 0.4
+
+  analysis_error:
+    short_name: SST Error Std 
+    long_name: Estimated error standard deviation of analysed_sst (sst)
+    units: kelvin
+    description: OSTIA foundation SST analysis standard deviation error
+# SSH
+  adt:
+    short_name: ADT
+    long_name: Absolute dynamic topography
+    units: m
+    description: Instantaneous height of the sea surface relative to the geoid.
+  
+  adt_std:
+    short_name: ADT Std
+    long_name: Standard deviation of absolute dynamic topography
+    units: m
+    description: Derived from a rolling mean (3*3 cells) from adt native resolution
+  
+  sla:
+    short_name: SLA
+    long_name: Sea level anomaly
+    units: m
+    description: Sea surface height above mean sea surface height.
+  
+  sla_std:
+    short_name: SLA Std
+    long_name: Standard deviation of sea level anomaly
+    units: m
+    description: Derived from a rolling mean (3*3 cells) from sla native resolution
+  
+  ugos:
+    short_name: UGOS
+    long_name: Sea surface velocity along the u-direction
+    units: m.s-1
+    description: Velocity of the sea surface in the u-direction (W-E).
+  
+  vgos:
+    short_name: VGOS
+    long_name: Sea surface velocity along the v-direction
+    units: m.s-1
+    description: Velocity of the sea surface in the v-direction (N-S).
+  
+  gke:
+    short_name: GKE
+    long_name: Geostrophic Kinetic Energy
+    units: m-2.s-2
+    description: Kinetic energy per unit mass of the total surface geostrophic flow, computed as ½(ugos² + vgos²)
+  
+# MLD
+  mld:
+    short_name: MLD
+    long_name: Mixed layer depth
+    units: m
+    description: Depth where the density increase compared to density at 10 m depth corresponds to a temperature decrease of 0.2°C in local surface conditions.
+
+# CHL
+  chl:
+    short_name: CHL
+    long_name: Chlorophyll-a concentration
+    units: mg.m-3  
+  
+  chl_fdist:
+    short_name: CHL FrontDist
+    long_name: Distance to nearest Chlorophyll-a front
+    units: km
+    description: Front detection defined by Belkin and O'Reilly (2009) method and a threshold value of 0.06
+
+# SEAPODYM
+  mnkc_epi:
+    short_name: MNKC EPI
+    long_name: Mass content of epipelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits permanently the epipelagic layer. Micronekton is classically defined by a size range of 2cm-20 cm. 
+      It contains a large diversity of fish, crustacean, squid and gelatinous species. It can be only a temporary stage for species with large growth potential.
+
+  mnkc_hmlmeso:
+    short_name: MNKC HMLMESO
+    long_name: Mass content of highly migrant lower mesopelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits the lower mesopelagic layer during daytime and the epipelagic layer during nighttime. 
+      Micronekton is classically defined by a size range of 2cm-20 cm. It contains a large diversity of fish, crustacean, squid and gelatinous species. 
+      It can be only a temporary stage for species with large growth potential.
+  
+  mnkc_lmeso:
+    short_name: MNKC LMESO
+    long_name: Mass content of lower mesopelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits permanently the lower mesopelagic layer. Micronekton is classically defined by a size range of 2cm-20 cm. 
+      It contains a large diversity of fish, crustacean, squid and gelatinous species. It can be only a temporary stage for species with large growth potential.
+
+  mnkc_mlmeso:
+    short_name: MNKC MLMESO
+    long_name: Mass content of migrant lower mesopelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits the lower mesopelagic layer during daytime and the upper mesopelagic layer during nighttime.
+      Micronekton is classically defined by a size range of 2cm-20 cm. It contains a large diversity of fish, crustacean, squid and gelatinous species. 
+      It can be only a temporary stage for species with large growth potential.
+
+  mnkc_mumeso:
+    short_name: MNKC MUMESO
+    long_name: Mass content of migrant upper mesopelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits the upper mesopelagic layer during daytime and the epipelagic layer during nighttime. 
+      Micronekton is classically defined by a size range of 2cm-20 cm. It contains a large diversity of fish, crustacean, squid and gelatinous species. 
+      It can be only a temporary stage for species with large growth potential.
+
+  mnkc_umeso:
+    short_name: MNKC UMESO
+    long_name: Mass content of upper mesopelagic micronekton expressed as wet weight
+    units: g.m-2
+    description: Component of the micronekton that inhabits permanently the upper mesopelagic layer. 
+      Micronekton is classically defined by a size range of 2cm-20 cm. 
+      It contains a large diversity of fish, crustacean, squid and gelatinous species. 
+      It can be only a temporary stage for species with large growth potential.
+  
+  npp:
+    short_name: NPP
+    long_name: Net primary productivity of biomass
+    units: mg.m-2.day-1
+  
+  zeu:
+    short_name: ZEU
+    long_name: Euphotic zone depth
+    units: m
+  
+  zooc:
+    short_name: ZOOC
+    long_name: Mass content of zooplankton expressed in carbon
+    units: g.m-2
+# O2
+  o2_0:
+    short_name: DO2 at 0m
+    long_name: Oxygen concentration at 0m depth
+    units: mmol.m-3
+
+  o2_100:
+    short_name: DO2 at 100m
+    long_name: Oxygen concentration at 100m depth
+    units: mmol.m-3
+
+  o2_500:
+    short_name: DO2 at 500m
+    long_name: Oxygen concentration at 500m depth
+    units: mmol.m-3
+
+  o2_1000:
+    short_name: DO2 at 1000m
+    long_name: Oxygen concentration at 1000m depth
+    units: mmol.m-3
+
+# FSLE
+  fsle_max:
+    short_name: FSLE 
+    long_name: Backward-in-time Finite Size Lyapunov Exponents
+    units: days-1
+    description: Finite-Size Lyapunov Exponents (FSLEs) based on the maximum eigenvalue of the Cauchy-Green strain tensor
+
+# EDDIES
+  ac_amp:
+    short_name: AC Amplitude
+    long_name: Amplitude of anticyclonic eddy
+    units: m
+  
+  ac_dist_km:
+    short_name: AC CenterDist 
+    long_name: Distance to anticyclonic eddy center
+    units: km
+  
+  ac_ndays:
+    short_name: AC Duration
+    long_name: Days starting at the first anticyclonic eddy detection
+    units: integer
+  
+  ac_normdist:
+    short_name: AC NormDist
+    long_name: Normalized distance to anticyclonic eddy center
+    units: 1
+    description: Normalized distance to anticyclonic eddy center relative to the radius of the eddy. 0=center, 1=radius
+  
+  ac_speed:
+    short_name: AC Radius Speed
+    long_name: Average speed of the contour defining the radius scale of the anticyclonic eddy
+    units: m.s-1
+  
+  ac_speedrad_km:
+    short_name: AC Radius
+    long_name: Radius of the best fit circle corresponding to the contour of maximum circum-average speed of the anticyclonic eddy
+    units: km
+  
+  ac_track:
+    short_name: AC ID Number
+    long_name: Trajectory identification number of the anticyclonic eddy
+    units: ordinal
+  
+  c_amp:
+    short_name: C Amplitude
+    long_name: Amplitude of cyclonic eddy
+    units: m
+
+  c_dist_km:
+    short_name: C CenterDist
+    long_name: Distance to cyclonic eddy center
+    units: km
+
+  c_ndays:
+    short_name: C Duration
+    long_name: Days starting at the first cyclonic eddy detection
+    units: integer
+
+  c_normdist:
+    short_name: C NormDist
+    long_name: Normalized distance to cyclonic eddy center
+    units: 1
+    description: Normalized distance to cyclonic eddy center relative to the radius of the eddy. 0=center, 1=radius
+  
+  c_speed:
+    short_name: C Radius Speed
+    long_name: Average speed of the contour defining the radius scale of the cyclonic eddy
+    units: m.s-1
+  
+  c_speedrad_km:
+    short_name: C Radius
+    long_name: Radius of the best fit circle corresponding to the contour of maximum circum-average speed of the cyclonic eddy
+    units: km
+  
+  c_track:
+    short_name: C ID Number
+    long_name: Trajectory identification number of the cyclonic eddy
+    units: ordinal
+
+# BATHY  
+  bathy:
+    short_name: Bathymetry
+    long_name: Bathymetry
+    units: m
+    description: Mean ocean depth calculated for each 0.25deg cell where original resolution cells (15arc-sec) fall into it.
+
+  bathy_std:
+    short_name: Bathymetry std
+    long_name: Standard deviation of bathymetry
+    units: m
+    description: Standard deviation calculated for each 0.25deg cell where original resolution cells (15arc-sec) fall into it.
+  
+# MOON  
+  moon_phase:
+    short_name: Moon Light
+    long_name: Moon illumination
+    units: percentage
+
+# ATM-INSTANTE
+  msl:
+    short_name: MSL
+    long_name: Mean sea level pressure
+    units: hPa
+  
+  tcc:
+    short_name: TCC
+    long_name: Total cloud cover
+    units: (0-1)
+  
+  u10:
+    short_name: U10
+    long_name: 10m u wind component
+    units: m.s-1
+  
+  v10:
+    short_name: V10
+    long_name: 10m v wind component
+    units: m.s-1
+  
+  wind_max:
+    short_name: Wind Max
+    long_name: 10m maximum wind speed
+    units: m.s-1
+  
+  wind_mean:
+    short_name: Wind Mean
+    long_name: 10m mean wind speed
+    units: m.s-1
+    
+  wind_std:
+    short_name: Wind Std
+    long_name: 10m standard deviation of wind speed
+    units: m.s-1
+  
+# ATM-ACCUM-AVG
+  avg_iews:
+    short_name: AVG IEWS
+    long_name: Instantaneous eastward turbulent surface stress
+    units: N.m-2
+    description: Daily mean surface stress, obtained by averaging hourly mean wind stress (N m-2) over each 24-hour period.
+  
+  avg_inss:
+    short_name: AVG INSS
+    long_name: Instantaneous northward turbulent surface stress
+    units: N.m-2
+    description: Daily mean surface stress, obtained by averaging hourly mean wind stress (N m-2) over each 24-hour period.
+  
+  ekman_7d:
+    short_name: Ekman 7d
+    long_name: Ekman 7-day mean vertical velocity
+    units: m.s-1
+    description: Ekman pumping mean velocity within a rolling 7-day window
+  
+  ekman_anom:
+    short_name: Ekman Anom
+    long_name: Ekman vertical velocity anomaly
+    units: m.s-1
+    description: Ekman anomaly calculated by the difference between a 7-day rolling mean Ekman pumping and 1998-2017 climatology, per day-of-year (DOY) and grid cell.
+  
+  ekman_anom_lag3:
+    short_name: Ekman Anom lag3
+    long_name: Ekman vertical velocity anomaly lagged by 3 days
+    units: m.s-1
+    description: 3-days lagged Ekman anomaly calculated as the difference between a 7-day rolling mean Ekman pumping and 1998-2017 climatology, per day-of-year (DOY) and grid cell.
+  
+  ekman_anom_lag7:
+    short_name: Ekman Anom lag7
+    long_name: Ekman vertical velocity anomaly lagged by 7 days
+    units: m.s-1
+    description: 7-days lagged Ekman anomaly calculated as the difference between a 7-day rolling mean Ekman pumping and 1998-2017 climatology, per day-of-year (DOY) and grid cell.
+  
+  ekman_anom_lag14:
+    short_name: Ekman Anom lag14
+    long_name: Ekman vertical velocity anomaly lagged by 14 days
+    units: m.s-1
+    description: 14-days lagged Ekman anomaly calculated as the difference between a 7-day rolling mean Ekman pumping and 1998-2017 climatology, per day-of-year (DOY) and grid cell.
+  
+  ekman_pumping:
+    short_name: Ekman Pump
+    long_name: Ekman vertical velocity
+    units: m.s-1
+    description: Daily Ekman pumping mean velocity derived from hourly data of surface wind stress curl/turbulence components. Pumping is defined as vertical velocity at the base of the Ekman layer. positive = upwelling (suction), negative = downwelling (pumping).
+  
+  n_upwell_events_3d:
+    short_name: Upwell 3d
+    long_name: Number of Ekman pumping upwelling events within 3-days
+    units: count
+    description: Daily count of events where Ekman pumping anomaly exceeded the 90th percentile threshold from the 1998 to 2017 monthly climatology computed for each grid cell and accumulated within a rolling 3-day window. Values range from 0 (no events) to 3 (all days in the window exceed threshold). Values dont represent days but frequency of events.
+  
+  n_upwell_events_7d:
+    short_name: Upwell 7d
+    long_name: Number of Ekman pumping upwelling events within 7-days
+    units: count
+    description: Daily count of events where Ekman pumping anomaly exceeded the 90th percentile threshold from the 1998 to 2017 monthly climatology computed for each grid cell and accumulated within a rolling 7-day window. Values range from 0 (no events) to 7 (all days in the window exceed threshold). Values dont represent days but frequency of events.
+  
+  n_upwell_events_14d:
+    short_name: Upwell 14d
+    long_name: Number of Ekman pumping upwelling events within 14-days
+    units: count
+    description: Daily count of events where Ekman pumping anomaly exceeded the 90th percentile threshold from the 1998 to 2017 monthly climatology computed for each grid cell and accumulated within a rolling 14-day window. Values range from 0 (no events) to 14 (all days in the window exceed threshold). Values dont represent days but frequency of events.
+ 
+  tp:
+    short_name: TP
+    long_name: Total accumulated precipitation
+    units: mm
+    description: Daily accumulated precipitation, obtained by summing hourly precipitation rates (mm) over each 24-hour period. 1mm of rain is equivalent to 1 kg.m-2
+
+# RADIATION
+  slhf:
+    short_name: SLHF
+    long_name: Surface latent heat flux
+    units: W.m-2
+    description: Daily mean surface radiation flux, obtained by averaging hourly mean radiation rates (W m-2) over each 24-hour period.
+  
+  ssrd:
+    short_name: SSRD
+    long_name: Surface solar radiation downwards
+    units: W.m-2
+    description: 
+  
+  tisr:
+    short_name: TISR
+    long_name: TOA incident solar radiation
+    units: W.m-2
+    description:
+
+# WAVES
+  mdts:
+    short_name: MDTS
+    long_name: Mean direction of total swell
+    units: degrees
+
+  swh:
+    short_name: SWH
+    long_name: Significant height of combined wind, waves and swell
+    units: m
+ 
+ 
+

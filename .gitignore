@@ -1,0 +1,28 @@
+# Byte-compiled
+__pycache__/
+
+# Data and logs (large / generated)
+data/
+logs/
+notebooks/
+
+# Virtual environment
+.venv/
+
+# Packaging artifacts
+*.egg-info/
+build/
+dist/
+
+# vscode
+.vscode/
+
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.env
+
+# Jupyter Notebook
+*.ipynb_checkpoints

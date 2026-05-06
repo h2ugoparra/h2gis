@@ -1,0 +1,99 @@
+# ZarrCatalog
+
+`ZarrCatalog` maintains a Parquet index for a single variable key, enabling efficient temporal range queries without opening every Zarr file.
+
+```python
+from h2gis.storage.zarr_catalog import ZarrCatalog
+
+catalog = ZarrCatalog("sst")
+print(catalog)                          # summary: coverage, bbox, file count
+ds = catalog.open_dataset(
+    start_date="2024-01-01",
+    end_date="2024-12-31",
+)
+```
+
+---
+
+## Constructor
+
+```python
+ZarrCatalog(
+    var_key,
+    time_resolution=TimeResolution.YEAR,
+    app_config=None,
+    store_root=None,
+    metadata_root=None,
+    auto_refresh=True,
+)
+```
+
+| Parameter | Default | Description |
+|---|---|---|
+| `var_key` | — | Variable key; must exist in `config.yaml` |
+| `time_resolution` | `YEAR` | Granularity used for the `period` column in the index |
+| `store_root` | `STORE_DIR/<local_folder>` | Directory scanned for `.zarr` files |
+| `metadata_root` | `data/processed/metadata/` | Directory for the Parquet catalog file |
+| `auto_refresh` | `True` | Check for new/modified files on each `.df` access |
+
+---
+
+## `open_dataset()`
+
+Open one or more Zarr files as a lazy xarray Dataset.
+
+```python
+# Date range mode
+ds = catalog.open_dataset(
+    start_date="2024-01-01",
+    end_date="2024-12-31",
+    bbox=(-80, 0, 10, 70),        # optional spatial subset
+    variables=["analysed_sst"],   # optional variable selection
+)
+
+# Sparse dates mode
+ds = catalog.open_dataset(
+    dates=["2024-06-15", "2024-07-20"],
+)
+```
+
+Issues a warning (but does not raise) when the requested range extends beyond what the store contains, and clamps to the available period.
+
+---
+
+## Catalog management
+
+| Method | Description |
+|---|---|
+| `refresh(force=False)` | Reload from disk; rescan if files have changed or `force=True` |
+| `reload()` | Force a full rescan unconditionally |
+| `get_time_coverage()` | Return `DateRange(min_start, max_end)` across all files |
+| `get_variables()` | Return the set of variable names across all files |
+| `get_bbox()` | Return the configured `BBox` for this variable |
+| `summary()` | Return a dict with file count, coverage, variables, and paths |
+| `backfill_provenance(rep_end_date)` | Write provenance sidecars for Zarr files that predate tracking |
+
+---
+
+## Staleness detection
+
+On each cold-start load `ZarrCatalog` compares the set of `.zarr` directory names on disk against those in the Parquet index. If they differ (files added or removed) it rescans automatically. Stale entries caused by in-place appends (same filename, new content) are detected via the stored `file_mtime`.
+
+---
+
+## Catalog schema
+
+Each row in the Parquet index represents one source dataset within one Zarr file.
+
+| Column | Type | Description |
+|---|---|---|
+| `path` | str | Absolute path to the `.zarr` directory |
+| `filename` | str | Basename of the `.zarr` directory |
+| `start_date` | datetime | First timestep in this source's period |
+| `end_date` | datetime | Last timestep in this source's period |
+| `dataset` | str | Source dataset ID (rep or nrt) |
+| `variables` | list[str] | Variable names inside the Zarr |
+| `xmin/ymin/xmax/ymax` | float | Spatial extent |
+| `num_timesteps` | int | Number of time steps in this source's period |
+| `file_mtime` | float | File modification time at last scan |
+| `scanned_at` | datetime | When this row was written |

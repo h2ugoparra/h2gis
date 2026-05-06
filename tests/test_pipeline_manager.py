@@ -1,0 +1,233 @@
+"""Tests for PipelineManager run() isolation and dry-run behaviour."""
+import pytest
+import msgspec
+from unittest.mock import MagicMock, patch, call
+
+from h2gis.models import AppConfig
+from h2gis.pipeline_manager import PipelineManager
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_ENTRY = {
+    "local_folder": "sst",
+    "variables": ["analysed_sst"],
+    "dataset_id_rep": "cmems_mod_glo_phy_my",
+    "source": "cmems",
+    "pattern": r".*\.nc",
+}
+
+
+def _make_config(*var_keys: str, source: str = "cmems") -> AppConfig:
+    variables = {k: {**_ENTRY, "local_folder": k} for k in var_keys}
+    return msgspec.convert({"variables": variables, "secrets": {}}, AppConfig)
+
+
+def _make_manager(cfg: AppConfig, tmp_path, **kwargs) -> PipelineManager:
+    downloader_cls = MagicMock()
+    downloader_cls.return_value = MagicMock()
+    registry = {"cmems": downloader_cls}
+    return PipelineManager(cfg, registry, tmp_path, **kwargs), registry["cmems"]
+
+
+# ---------------------------------------------------------------------------
+# Per-variable error isolation
+# ---------------------------------------------------------------------------
+
+class TestDownloadFailureIsolation:
+
+    def test_download_error_skips_to_next_variable(self, tmp_path):
+        """A RuntimeError during download must not stop processing of other variables."""
+        cfg = _make_config("sst", "chl")
+        manager, downloader_cls = _make_manager(cfg, tmp_path)
+
+        # sst download fails; chl succeeds
+        downloader_cls.return_value.run.side_effect = [RuntimeError("network error"), True]
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            MockConverter.return_value.run.return_value = None
+            manager.run()
+
+        # Converter called only for chl (sst was skipped after download failure)
+        assert MockConverter.return_value.run.call_count == 1
+
+    def test_converter_error_does_not_raise(self, tmp_path):
+        """A RuntimeError in Netcdf2Zarr.run() must be logged but not propagate."""
+        cfg = _make_config("sst")
+        manager, _ = _make_manager(cfg, tmp_path)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            MockConverter.return_value.run.side_effect = RuntimeError("zarr error")
+            manager.run()  # should not raise
+
+    def test_converter_error_continues_next_variable(self, tmp_path):
+        """Converter failure on one variable must not prevent the next from running."""
+        cfg = _make_config("sst", "chl")
+        manager, _ = _make_manager(cfg, tmp_path)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            MockConverter.return_value.run.side_effect = [RuntimeError("zarr error"), None]
+            manager.run()
+
+        assert MockConverter.return_value.run.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# dry_run flag
+# ---------------------------------------------------------------------------
+
+class TestDryRun:
+
+    def test_dry_run_skips_converter(self, tmp_path):
+        """With dry_run=True, Netcdf2Zarr.run() must never be called."""
+        cfg = _make_config("sst", "chl")
+        manager, _ = _make_manager(cfg, tmp_path, dry_run=True)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            manager.run()
+
+        MockConverter.assert_not_called()
+
+    def test_no_process_skips_converter(self, tmp_path):
+        """With no_process=True, Netcdf2Zarr.run() must never be called."""
+        cfg = _make_config("sst")
+        manager, _ = _make_manager(cfg, tmp_path, no_convert=True)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            manager.run()
+
+        MockConverter.assert_not_called()
+
+    def test_dry_run_still_calls_downloader(self, tmp_path):
+        """dry_run=True is forwarded to downloader.run(), not skipped entirely."""
+        cfg = _make_config("sst")
+        manager, downloader_cls = _make_manager(cfg, tmp_path, dry_run=True)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+            manager.run()
+
+        downloader_cls.return_value.run.assert_called_once_with(
+            dry_run=True, start_date=None, end_date=None
+        )
+
+    def test_dates_forwarded_to_run(self, tmp_path):
+        """start_date/end_date set on PipelineManager must be forwarded to downloader.run()."""
+        cfg = _make_config("sst")
+        manager, downloader_cls = _make_manager(
+            cfg, tmp_path,
+            start_date="2020-01-01",
+            end_date="2020-12-31",
+        )
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+            manager.run()
+
+        downloader_cls.return_value.run.assert_called_once_with(
+            dry_run=False,
+            start_date="2020-01-01",
+            end_date="2020-12-31",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Variable filtering
+# ---------------------------------------------------------------------------
+
+class TestVariableFiltering:
+
+    def test_h2ds_bathy_moon_always_skipped(self, tmp_path):
+        """h2ds, bathy, and moon are pipeline-internal and must never be downloaded."""
+        cfg = _make_config("sst", "h2ds", "bathy", "moon")
+        manager, downloader_cls = _make_manager(cfg, tmp_path)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+            manager.run()
+
+        # Only 'sst' should have a downloader instantiated
+        assert downloader_cls.call_count == 1
+
+    def test_unknown_source_skips_variable(self, tmp_path):
+        """A var_key whose source has no registered downloader is skipped gracefully."""
+        cfg = _make_config("sst")
+        # Registry missing 'cmems' → no downloader found
+        manager = PipelineManager(cfg, {}, tmp_path)
+
+        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+            manager.run()  # should not raise
+
+        MockConverter.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Post-run cleanup
+# ---------------------------------------------------------------------------
+
+class TestCleanup:
+
+    def test_empty_download_dir_removed(self, tmp_path):
+        """An empty per-variable download subdirectory is removed after the pipeline run."""
+        cfg = _make_config("sst")
+        manager, _ = _make_manager(cfg, tmp_path)
+
+        # Simulate the empty folder the downloader would have created
+        empty_dir = tmp_path / "downloads" / "sst"
+        empty_dir.mkdir(parents=True)
+
+        with patch("h2gis.pipeline_manager.settings") as mock_settings, \
+             patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+            mock_settings.DOWNLOADS_DIR = tmp_path / "downloads"
+            manager.run()
+
+        assert not empty_dir.exists()
+
+    def test_non_empty_download_dir_kept(self, tmp_path):
+        """A download subdirectory that still has files must not be removed."""
+        cfg = _make_config("sst")
+        manager, _ = _make_manager(cfg, tmp_path)
+
+        non_empty_dir = tmp_path / "downloads" / "sst"
+        non_empty_dir.mkdir(parents=True)
+        (non_empty_dir / "data.nc").write_text("data")
+
+        with patch("h2gis.pipeline_manager.settings") as mock_settings, \
+             patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+            mock_settings.DOWNLOADS_DIR = tmp_path / "downloads"
+            manager.run()
+
+        assert non_empty_dir.exists()
+
+    def test_cleanup_empty_download_dir_removes_on_dry_run(self, tmp_path):
+        """_cleanup_empty_download_dir removes an empty folder even during dry-run."""
+        from h2gis.downloader.base import BaseDownloader
+        import msgspec
+        from h2gis.models import AppConfig
+
+        cfg = msgspec.convert(
+            {"variables": {"sst": {
+                "local_folder": "sst",
+                "variables": ["analysed_sst"],
+                "dataset_id_rep": "cmems_mod",
+                "source": "cmems",
+                "pattern": r".*\.nc",
+            }}, "secrets": {}},
+            AppConfig,
+        )
+
+        empty_dir = tmp_path / "sst"
+        empty_dir.mkdir()
+
+        # Instantiate a concrete subclass just to test the base method
+        class _DummyDownloader(BaseDownloader):
+            def run(self, *a, **kw): ...
+
+        with patch("h2gis.downloader.base.settings") as mock_settings:
+            mock_settings.app_config = cfg
+            mock_settings.DOWNLOADS_DIR = tmp_path
+            mock_settings.STORE_DIR = None
+            mock_settings.ARCHIVE_DIR = tmp_path / "archive"
+            d = _DummyDownloader("sst", app_config=cfg, download_root=tmp_path)
+
+        d._cleanup_empty_download_dir()
+        assert not empty_dir.exists()

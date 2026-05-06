@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "h2gis"
+version = "0.1.0"
+description = "Downloader and data management tools for climate and ocean datasets."
+authors = [
+    { name = "Hugo Parra", email = "h2ugo.parra@pm.me" }
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "copernicusmarine",
+    "cdsapi",
+    "cfgrib",
+    "eccodes",
+    "polars",
+    "xarray",
+    "netCDF4",
+    "geopandas",
+    "dask",
+    "matplotlib",
+    "loguru",
+    "python-dotenv",
+    "global_land_mask",
+    "ipython",
+    "cartopy",
+    "plotly",
+    "ephem",
+    "rioxarray",
+    "msgspec",
+    "duckdb",
+    "typer",
+    "scipy",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["h2gis*"]
+
+[tool.uv]
+# sparse>=0.15 breaks copernicusmarine.subset
+constraint-dependencies = ["sparse==0.14.0"]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+    "ipykernel>=7.2.0",
+    "isort>=8.0.1",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "tox>=4.30.3",
+    "tox-uv>=1.28.1",
+]
+
+
+[project.scripts]
+h2gis = "h2gis.cli:app"
+
+[tool.isort]
+profile = "black"
+skip_glob = ["*.ipynb"]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+env_list = py311, py312, py313
+isolated_build = true
+
+[testenv]
+runner = uv-venv-lock-runner
+extras = dev
+commands =
+    pytest tests/ -q
+"""

@@ -1,0 +1,1177 @@
+"""
+Zarr catalog management for tracking processed zarr datasets.
+
+This module provides functionality to create and maintain a Parquet catalog
+of processed zarr files, enabling efficient dataset discovery and metadata queries.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Literal, Optional, Sequence, Union
+
+import pandas as pd
+import xarray as xr
+from loguru import logger
+
+from h2gis.config import AppConfig, settings
+from h2gis.types import BBox, DateLike, DateRange, TimeResolution
+from h2gis.utils.datetime_utils import normalize_date
+from h2gis.utils.labels import create_label_from_dataset
+from h2gis.utils.paths import resolve_store_path
+from h2gis.validators import validate_time_resolution, validate_var_key
+
+
+@dataclass
+class DirectoryState:
+    """Represents the state of zarr files in a directory."""
+
+    files: dict[str, float]  # filenmae -> mtime
+    count: int
+    last_modified: float
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, DirectoryState):
+            return NotImplemented
+        return self.files == other.files
+
+    def __hash__(self) -> int:
+        # Create a stable hash from sorted files
+        file_str = ",".join(f"{k}:{v}" for k, v in sorted(self.files.items()))
+        return int(hashlib.md5(file_str.encode()).hexdigest()[:16], 16)
+
+
+# ================ Convenience functions for quick access ==========================
+def get_zarr_time_coverage(var_key: str) -> DateRange | None:
+    catalog = ZarrCatalog(var_key)
+    return catalog.get_time_coverage()
+
+
+class ZarrCatalog:
+    def __init__(
+        self,
+        var_key: str,
+        *,
+        time_resolution: TimeResolution = TimeResolution.YEAR,
+        app_config: Optional[AppConfig] = None,
+        store_root: Optional[Path] = None,
+        metadata_root: Optional[Path] = None,
+        auto_refresh: bool = True,
+    ) -> None:
+        """
+        Manages a Parquet catalog of processed zarr datasets.
+        The catalog tracks metadata about zarr files including spatial extent,
+        temporal coverage, variables, and file locations.
+
+        Args:
+            var_key (str): Variable key that must exist in app_config.variables
+            time_resolution: Temporal granularity for file storage ('year' or 'month'). Defaults to 'year'.
+            app_config (Optional[AppConfig], optional): Application configuration. If None, loads from settings.
+            store_root (Optional[Path]): Root directory for zarr files. If None, uses settings.STORE_DIR or settings.ARCHIVE_DIR.
+            metadata_root (Optional[Path]): Root directory for catalog parquet files. If None, uses settings.METADATA_DIR.
+            auto_refresh (bool): Automatically check for changes on access. Defaults to True.
+
+        Raises:
+            ValueError: If var_key not found in configuration or invalid period
+            ValueError: If store_root doesn't exist
+
+        Example:
+            >>> catalog = ZarrCatalog("ssh")
+        """
+        # Load config
+        self.app_config = app_config or settings.app_config
+        self.var_key = validate_var_key(var_key, self.app_config)
+        self.var_config = self.app_config.variables[var_key]
+
+        self.time_resolution = validate_time_resolution(time_resolution)
+
+        # Setup directories
+        self.store_root = resolve_store_path(self.var_config, store_root)
+        self.metadata_root = metadata_root or settings.METADATA_DIR
+
+        self.auto_refresh = auto_refresh
+        self._cached_state: Optional[DirectoryState] = None
+        self._df_cache: Optional[pd.DataFrame] = None
+
+        if auto_refresh:
+            self.refresh()
+
+    def __repr__(self) -> str:
+        """String representation with useful info."""
+        df = self.df
+        time_cov = self.get_time_coverage()
+
+        time_str = (
+            f"{time_cov.start.date()} to {time_cov.end.date()}"
+            if time_cov
+            else "No data"
+        )
+
+        bbox = self.get_bbox()
+
+        return (
+            f"ZarrCatalog(\n"
+            f"  var_key={self.var_key},\n"
+            f"  time_resolution={self.time_resolution.value},\n"
+            f"  files={df['path'].nunique() if not df.empty else 0},\n"
+            f"  coverage={time_str},\n"
+            f"  bbox={bbox.to_label() if bbox is not None else None},\n"
+            f")"
+        )
+
+    # ===============   IO Internal helpers  ================================
+
+    @property
+    def catalog_path(self) -> Path:
+        """Path to the catalog parquet file."""
+        filename = f"{self.var_key}_zarr_catalog.parquet"
+        return self.metadata_root / filename
+
+    def exists(self) -> bool:
+        """Check if catalog file exists."""
+        return self.catalog_path.exists()
+
+    def _load_from_disk(self) -> pd.DataFrame:
+        """
+        Load catalog from parquet file.
+
+        Returns:
+            Catalog DataFrame, empty if file doesn't exist
+        """
+        if not self.catalog_path.exists():
+            logger.debug(f"Catalog file not found: {self.catalog_path}")
+            return pd.DataFrame()
+
+        try:
+            df = pd.read_parquet(self.catalog_path)
+            if "dataset" not in df.columns:
+                df["dataset"] = self.var_config.dataset_id_rep
+            logger.debug(
+                f"Loaded {self.var_key} catalog with {len(df)} entries from {self.catalog_path}"
+            )
+            return df
+        except Exception as e:
+            logger.error(f"Failed to load catalog: {e}")
+            return pd.DataFrame()
+
+    def _scan_and_build(self) -> pd.DataFrame:
+        """
+        Scan zarr files and build fresh catalog.
+
+        Returns:
+            New catalog DataFrame
+        """
+        logger.info(f"Scanning {self.store_root}")
+        records = self._scan_zarr_files()
+
+        if not records:
+            logger.warning("No zarr files found during scan")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(records)
+        df = df.sort_values("start_date")
+
+        # Save to disk
+        self._save_catalog(df)
+
+        return df
+
+    def _scan_zarr_files(self) -> list[dict]:
+        """
+        Scan zarr files and extract metadata from every zarr in store_root.
+
+        Returns:
+            List of record dictionaries (may be multiple per zarr file when
+            provenance sidecars split rep and nrt into separate rows).
+        """
+        if not self.store_root.exists():
+            logger.warning(f"Store directory not found: {self.store_root}")
+            return []
+
+        zarr_files = sorted(self.store_root.glob("*.zarr"))
+
+        records: list[dict] = []
+
+        for zarr_path in zarr_files:
+            try:
+                record_list = self._extract_zarr_metadata(zarr_path)
+                if record_list:
+                    records.extend(record_list)
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"Failed to read {zarr_path.name}: {e}")
+
+        logger.info(f"Scan complete: {len(zarr_files)} zarr files read")
+        return records
+
+    def _get_directory_state(self) -> DirectoryState:
+        """
+        Scan directory and return current state.
+
+        Returns:
+            DirectoryState with file mtimes
+
+        Raises:
+            FileNotFoundError: If store_root doesn't exist
+        """
+        if not self.store_root.exists():
+            raise FileNotFoundError(f"Store directory not found: {self.store_root}")
+
+        files: dict[str, float] = {}
+
+        try:
+            for entry in self.store_root.iterdir():
+                if entry.is_dir() and entry.name.endswith(".zarr"):
+                    files[entry.name] = entry.stat().st_mtime
+        except PermissionError as e:
+            logger.warning(f"Permission denied scanning {self.store_root}: {e}")
+            return DirectoryState(files={}, count=0, last_modified=0.0)
+
+        if not files:
+            return DirectoryState(files={}, count=0, last_modified=0.0)
+
+        return DirectoryState(
+            files=files,
+            count=len(files),
+            last_modified=max(files.values()),
+        )
+
+    def _extract_zarr_metadata(self, zarr_path: Path) -> list[dict]:
+        """
+        Extract metadata from a single zarr file.
+
+        Returns one dict per source dataset. When a provenance sidecar
+        ``{stem}_prov.json`` exists next to the zarr directory the result
+        contains one entry per dataset_id recorded there (typically two for
+        files that blend rep and nrt data). Falls back to a single row using
+        ``dataset_id_rep`` when no sidecar is present.
+
+        Args:
+            zarr_path: Path to .zarr directory
+
+        Returns:
+            List of record dicts (empty on failure)
+        """
+        try:
+            ds = xr.open_zarr(zarr_path, consolidated=False)
+
+            # Actual time coverage — always from the zarr's time coordinate,
+            # never from provenance (which can be stale after appends).
+            time_min = pd.to_datetime(ds.time.min().compute().item()).normalize()
+            time_max = pd.to_datetime(ds.time.max().compute().item()).normalize()
+
+            xmin = ds.lon.min().compute().item()
+            ymin = ds.lat.min().compute().item()
+            xmax = ds.lon.max().compute().item()
+            ymax = ds.lat.max().compute().item()
+
+            period_value = (
+                time_min.year
+                if self.time_resolution == TimeResolution.YEAR
+                else f"{time_min.year}-{time_min.month:02d}"
+            )
+
+            base = {
+                "path": str(zarr_path),
+                "filename": zarr_path.name,
+                "xmin": xmin,
+                "ymin": ymin,
+                "xmax": xmax,
+                "ymax": ymax,
+                "variables": list(ds.data_vars.keys()),
+                "file_mtime": zarr_path.stat().st_mtime,
+                "scanned_at": datetime.now(),
+                "period": period_value,
+                "start_date": time_min,
+                "end_date": time_max,
+                "num_timesteps": len(ds.time),
+            }
+
+            # Use provenance only for dataset_id / dataset_type — one row per source.
+            # Dates are clamped to the actual zarr time range so stale provenance
+            # never overrides what is physically in the file.
+            raw = ds.attrs.get("source_datasets")
+            if raw is None:
+                prov_file = zarr_path.parent / (zarr_path.stem + "_prov.json")
+                if prov_file.exists():
+                    raw = prov_file.read_text()
+
+            if raw is not None:
+                sources = json.loads(raw)
+                records = []
+                for i, src in enumerate(sources):
+                    p_start = pd.to_datetime(src["start_date"]).normalize()
+                    p_end = pd.to_datetime(src["end_date"]).normalize()
+                    # First entry anchors to time_min: early data may have been
+                    # appended before these provenance records were written.
+                    rec_start = time_min if i == 0 else max(p_start, time_min)
+                    # The last source may have been extended by subsequent appends
+                    # so trust time_max over provenance for its end date.
+                    # Earlier sources are complete periods with fixed boundaries.
+                    rec_end = (
+                        time_max if i == len(sources) - 1 else min(p_end, time_max)
+                    )
+                    if rec_start > rec_end:
+                        continue
+                    n_ts = len(ds.sel(time=slice(rec_start, rec_end)).time)
+                    records.append(
+                        {
+                            **base,
+                            "dataset": src["dataset_id"],
+                            "start_date": rec_start,
+                            "end_date": rec_end,
+                            "num_timesteps": n_ts,
+                        }
+                    )
+                if records:
+                    return records
+
+            # No valid provenance: single row, dataset = rep id
+            return [{**base, "dataset": self.var_config.dataset_id_rep}]
+
+        except (OSError, KeyError, ValueError, RuntimeError) as e:
+            logger.error(f"Error extracting metadata from {zarr_path}: {e}")
+            return []
+
+    def _save_catalog(self, df: pd.DataFrame) -> None:
+        """
+        Save catalog DataFrame to parquet.
+
+        Args:
+            df: Catalog DataFrame to save
+        """
+        # Ensure directory exists
+        self.catalog_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Save to parquet
+        df.to_parquet(self.catalog_path, index=False)
+        logger.info(f"Saved catalog with {len(df)} entries to {self.catalog_path}")
+
+    def has_changes(self) -> bool:
+        """
+        Check if directory has changed since last scan.
+
+        Returns:
+            True if changes detected or first time checking
+        """
+        try:
+            current_state = self._get_directory_state()
+        except FileNotFoundError:
+            logger.debug(f"Store directory not found: {self.store_root}")
+            return False
+
+        # First time - no changes yet
+        if self._cached_state is None:
+            self._cached_state = current_state
+            return False
+
+        # Compare states
+        has_changed = current_state != self._cached_state
+
+        if has_changed:
+            logger.info(
+                f"Changes detected in {self.store_root}: "
+                f"{self._cached_state.count} → {current_state.count} files"
+            )
+            self._cached_state = current_state
+
+        return has_changed
+
+    def refresh(self, force: bool = False) -> pd.DataFrame:
+        """
+        Refresh catalog if needed.
+
+        Args:
+            force: Force rescan even if no changes detected
+
+        Returns:
+            Updated catalog DataFrame
+
+        Logic:
+            1. If force=True: rescan
+            2. If changes detected: rescan
+            3. If catalog file exists: load from disk
+            4. Otherwise: rescan
+        """
+        # Check if rescan needed
+        should_rescan = force or self.has_changes()
+
+        if should_rescan:
+            self._df_cache = self._scan_and_build()
+        elif self._df_cache is None:
+            self._df_cache = self._load_from_disk()
+            if self.store_root.exists():
+                if self._df_cache.empty:
+                    logger.debug("No catalog file found, performing initial scan")
+                    self._df_cache = self._scan_and_build()
+                else:
+                    # Detect files added to disk since the catalog was last written
+                    disk_files = {p.name for p in self.store_root.glob("*.zarr")}
+                    catalog_files = {Path(p).name for p in self._df_cache["path"].unique()}
+                    if disk_files != catalog_files:
+                        logger.debug(
+                            f"[{self.var_key}] Catalog is stale "
+                            f"(disk={len(disk_files)}, catalog={len(catalog_files)}) — rescanning"
+                        )
+                        self._df_cache = self._scan_and_build()
+        # else: use existing cache
+        return self._df_cache
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """
+        Get catalog DataFrame.
+
+        Behavior:
+            - If auto_refresh=True: Check for changes on each access
+            - If auto_refresh=False: Load once and cache forever
+
+        Returns:
+            Catalog DataFrame
+        """
+        if self.auto_refresh:
+            # Always check for changes
+            return self.refresh()
+        else:
+            # Load once, cache forever
+            if self._df_cache is None:
+                self._df_cache = self.refresh()
+            return self._df_cache
+
+    def reload(self) -> pd.DataFrame:
+        """
+        Force reload from disk or rescan.
+
+        Returns:
+            Fresh catalog DataFrame
+        """
+        self._df_cache = None
+        self._cached_state = None
+        return self.refresh(force=True)
+
+    def get_change_summary(self) -> dict[str, Any]:
+        """
+        Get detailed summary of changes.
+
+        Returns:
+            Dictionary with added, removed, and modified files
+        """
+        try:
+            current_state = self._get_directory_state()
+        except FileNotFoundError:
+            return {"error": "Store directory not found"}
+
+        if self._cached_state is None:
+            return {
+                "added": list(current_state.files.keys()),
+                "removed": [],
+                "modified": [],
+                "total": current_state.count,
+            }
+
+        old_files = set(self._cached_state.files.keys())
+        new_files = set(current_state.files.keys())
+
+        added = new_files - old_files
+        removed = old_files - new_files
+        modified = {
+            f
+            for f in old_files & new_files
+            if self._cached_state.files[f] != current_state.files[f]
+        }
+
+        return {
+            "added": sorted(added),
+            "removed": sorted(removed),
+            "modified": sorted(modified),
+            "total": current_state.count,
+        }
+
+    # ==================== Query Methods ====================
+    def _find_overlapping_files(
+        self, start: pd.Timestamp, end: pd.Timestamp
+    ) -> pd.DataFrame:
+        """Return catalog rows whose date range overlaps [start, end], sorted by start_date."""
+        df = self.df
+        if df.empty:
+            logger.warning("Catalog is empty, no paths available")
+            return pd.DataFrame()
+
+        return df[(df["start_date"] <= end) & (df["end_date"] >= start)].sort_values(
+            "start_date"
+        )
+
+    def map_dates_to_paths(
+        self, dates: Union[DateLike, Sequence[DateLike]]
+    ) -> dict[str, list[pd.Timestamp]]:
+        """
+        Map zarr file paths to their corresponding dates.
+
+        Note: Finds files containing each date, not a date range.
+        For ranges, use get_paths_for_range() or pass a list of all dates.
+
+        Args:
+            dates: Single date or sequence of dates
+
+        Returns:
+            Dictionary mapping file paths to lists of matched dates
+
+        Example:
+            >>> catalog.get_paths(['1998-01-15', '2020-06-20'])
+            {'/path/1998.zarr': [Timestamp('1998-01-15')],
+             '/path/2020.zarr': [Timestamp('2020-06-20')]}
+        """
+        # Normalize input to list of timestamps
+        date_list = normalize_date(dates)
+
+        if not date_list:
+            return {}
+
+        # Get catalog
+        df = self.df
+
+        result: dict[str, list[pd.Timestamp]] = defaultdict(list)
+
+        date_list = [date_list] if isinstance(date_list, pd.Timestamp) else date_list
+        for ts in date_list:
+            matches = self._find_overlapping_files(ts, ts)
+            if matches.empty:
+                logger.debug(f"No zarr file contains date: {ts}")
+                continue
+            result[str(matches.iloc[0]["path"])].append(ts)
+
+        return dict(result)  # Convert defaultdict to regular dict
+
+    def get_paths_in_range(
+        self,
+        start_date: DateLike,
+        end_date: DateLike,
+    ) -> list[str]:
+        """
+        Get all zarr file paths that overlap with a date range.
+
+        Args:
+            start_date: Range start
+            end_date: Range end
+
+        Returns:
+            List of file paths, sorted by start date
+
+        Example:
+            >>> catalog.get_paths_for_range('2020-01-01', '2020-12-31')
+            ['/path/2020.zarr']
+        """
+        start = pd.to_datetime(start_date).normalize()
+        end = pd.to_datetime(end_date).normalize()
+
+        # Find overlapping files
+        matches = self._find_overlapping_files(start, end)
+        if matches.empty:
+            logger.warning(f"[{self.var_key}] No zarr files overlap range {start.date()} to {end.date()}")
+            return []
+
+        # Sort by start date and return unique paths (a file with rep+nrt rows
+        # would otherwise appear twice and break xr.open_mfdataset)
+        matches = matches.sort_values("start_date")
+        seen: set[str] = set()
+        unique: list[str] = []
+        for p in matches["path"]:
+            if p not in seen:
+                seen.add(p)
+                unique.append(p)
+        return unique
+
+    def open_dataset(
+        self,
+        dates: DateLike | Sequence[DateLike] | None = None,
+        start_date: DateLike | None = None,
+        end_date: DateLike | None = None,
+        bbox: BBox | Sequence[float] | None = None,
+        variables: str | Sequence[str] | None = None,
+        chunks: dict | str | None = "auto",
+    ) -> xr.Dataset:
+        """
+        Open zarr dataset(s) with flexible date and spatial selection.
+
+        Supports two modes:
+        1. Sparse dates: Provide `dates` for specific dates
+        2. Date range: Provide `start_date` and/or `end_date`
+
+        Args:
+            dates: Specific dates to select (sparse mode)
+            start_date: Start of date range (range mode)
+            end_date: End of date range (range mode)
+            bbox: Bounding box [xmin, ymin, xmax, ymax]
+            variables: Variables to select (None = all)
+            chunks: Chunking strategy for dask ('auto' or dict)
+
+        Returns:
+            Lazy xarray Dataset, or None if no data found
+
+        Raises:
+            ValueError: If neither dates nor start_date/end_date provided,
+                       or if bbox format is invalid
+
+        Example:
+            >>> # Sparse dates
+            >>> ds = catalog.open_dataset(dates=['2020-01-15', '2020-06-20'])
+            >>>
+            >>> # Date range
+            >>> ds = catalog.open_dataset(
+            ...     start_date='2020-01-01',
+            ...     end_date='2020-12-31',
+            ...     bbox=(-180, -90, 180, 90),
+            ...     variables=['mld']
+            ... )
+        """
+        # Validate inputs
+        if dates is None and start_date is None and end_date is None:
+            date_range = self.get_time_coverage()
+            if date_range:
+                start_date, end_date = date_range.start, date_range.end
+            else:
+                raise ValueError(
+                    "Please provide sparse 'dates' or 'start_date/end_date' range"
+                )
+
+        if dates is not None and (start_date is not None or end_date is not None):
+            raise ValueError(
+                "Cannot use both 'dates' and 'start_date'/'end_date'. "
+                "Use one mode or the other."
+            )
+
+        if bbox is not None:
+            bbox = bbox if isinstance(bbox, BBox) else BBox.from_tuple(bbox)
+
+        # Route to appropriate method
+        if dates is not None:
+            return self._open_sparse_dates(
+                dates=dates,
+                bbox=bbox,
+                variables=variables,
+                chunks=chunks,
+            )
+        else:
+            return self._open_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                bbox=bbox,
+                variables=variables,
+                chunks=chunks,
+            )
+
+    def _open_sparse_dates(
+        self,
+        dates: DateLike | Sequence[DateLike],
+        bbox: BBox | None,
+        variables: str | Sequence[str] | None,
+        chunks: dict | str | None,
+    ) -> xr.Dataset:
+        """Open dataset for specific sparse dates."""
+        # Normalize dates
+        date_list = normalize_date(dates)
+
+        if not date_list:
+            raise ValueError("No valid dates provided")
+
+        # Get file paths
+        path_mapping = self.map_dates_to_paths(date_list)
+
+        if not path_mapping:
+            raise FileNotFoundError(f"No zarr files contain dates: {date_list}")
+
+        paths = list(path_mapping.keys())
+
+        # Open datasets
+        try:
+            ds = xr.open_mfdataset(
+                paths,
+                engine="zarr",
+                combine="by_coords",
+                parallel=True,
+                data_vars="minimal",
+                coords="minimal",  # type: ignore[arg-type]
+                compat="override",
+                chunks=chunks,
+                preprocess=lambda d: self._preprocess_dataset(d, bbox, variables),
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to open zarr files: {e}") from e
+
+        # Normalize time coordinates
+        ds = self._normalize_time(ds)
+
+        # Select only requested dates
+        if isinstance(date_list, pd.Timestamp):
+            date_list = [date_list]
+        requested_dates = pd.DatetimeIndex(date_list).normalize()
+        available_dates = pd.DatetimeIndex(ds.time.values).normalize()
+
+        valid_dates = requested_dates.intersection(available_dates)
+
+        if len(valid_dates) == 0:
+            raise FileNotFoundError(
+                f"None of the requested dates found in dataset. "
+                f"Requested: {requested_dates.tolist()}, "
+                f"Available: {available_dates.tolist()}"
+            )
+
+        if len(valid_dates) < len(requested_dates):
+            missing = requested_dates.difference(available_dates)
+            logger.warning(f"Missing dates: {missing.tolist()}")
+
+        return ds.sel(time=valid_dates.tolist())
+
+    def _open_date_range(
+        self,
+        start_date: DateLike | None,
+        end_date: DateLike | None,
+        bbox: BBox | None,
+        variables: str | Sequence[str] | None,
+        chunks: dict | str | None,
+    ) -> xr.Dataset:
+        """Open dataset for continuous date range."""
+
+        # Get catalog
+        df = self.df
+
+        if df.empty:
+            raise FileNotFoundError("Catalog is empty")
+
+        # Default to full range if not specified
+        start: pd.Timestamp = (
+            df["start_date"].min()
+            if start_date is None
+            else pd.to_datetime(start_date).normalize()
+        )
+        end: pd.Timestamp = (
+            df["end_date"].max()
+            if end_date is None
+            else pd.to_datetime(end_date).normalize()
+        )
+
+        if pd.isna(start) or pd.isna(end):
+            raise ValueError(
+                "Date range contains NaT — check catalog date columns for missing values"
+            )
+
+        # Warn if requested range extends beyond what the catalog covers
+        available_start = pd.Timestamp(df["start_date"].min()).normalize()
+        available_end = pd.Timestamp(df["end_date"].max()).normalize()
+
+        if start_date is not None and start < available_start:
+            logger.warning(
+                f"[{self.var_key}] Requested start {start.date()} not available — "
+                f"opening from {available_start.date()}"
+            )
+            start = available_start
+
+        if end_date is not None and end > available_end:
+            logger.warning(
+                f"[{self.var_key}] Requested end {end.date()} not available — "
+                f"opening until {available_end.date()}"
+            )
+            end = available_end
+
+        # Get overlapping paths
+        paths = self.get_paths_in_range(start, end)
+
+        if not paths:
+            raise FileNotFoundError(
+                f"No zarr files found for range: {start.date()} to {end.date()}"
+            )
+
+        # Open datasets
+        try:
+            ds = xr.open_mfdataset(
+                paths,
+                engine="zarr",
+                combine="by_coords",
+                parallel=True,
+                data_vars="minimal",
+                coords="minimal",  # type: ignore[arg-type]
+                compat="override",
+                chunks=chunks,
+                preprocess=lambda d: self._preprocess_dataset(d, bbox, variables),
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to open zarr files: {e}") from e
+
+        # Normalize time
+        ds = self._normalize_time(ds)
+
+        # Select time range
+        return ds.sel(time=slice(start, end))
+
+    def build_file_path(
+        self,
+        ds: xr.Dataset,
+        date_format: Literal["year", "date", "yearmonth"],
+        store_root: Optional[Path] = None,
+        name_key: Optional[str] = None,
+    ) -> Path:
+        """
+        Build zarr file path as: store_root / {source}_{name_key}_{geo_extent}_{dates}.zarr
+
+        name_key defaults to var_key; pass dataset_id_rep (or any string) to override.
+        If store_root not provided, uses self.store_root.
+        """
+        label = create_label_from_dataset(ds, date_format=date_format)
+        store_root = store_root or self.store_root
+        key = name_key if name_key is not None else self.var_key
+        return store_root / f"{self.var_config.source}_{key}_{label}.zarr"
+
+    # ==================== Helper Methods ====================
+    def _normalize_time(self, ds: xr.Dataset) -> xr.Dataset:
+        """
+        Normalize time coordinates to midnight (00:00:00).
+
+        Args:
+            ds: Dataset with time coordinate
+
+        Returns:
+            Dataset with normalized time
+        """
+        if "time" not in ds.coords:
+            return ds
+
+        normalized_time = pd.to_datetime(ds["time"].values).normalize()
+        return ds.assign_coords(time=normalized_time)
+
+    def _preprocess_dataset(
+        self,
+        ds: xr.Dataset,
+        bbox: BBox | None,
+        variables: str | Sequence[str] | None,
+    ) -> xr.Dataset:
+        """
+        Preprocess dataset: apply bbox and variable selection.
+
+        This runs BEFORE datasets are combined in open_mfdataset.
+
+        Args:
+            ds: Input dataset
+            bbox: Bounding box to apply
+            variables: Variables to select
+
+        Returns:
+            Preprocessed dataset
+        """
+        # Select variables
+        if variables is not None:
+            var_list = [variables] if isinstance(variables, str) else list(variables)
+            # Only select variables that exist
+            available = set(ds.data_vars.keys())
+            to_select = [v for v in var_list if v in available]
+
+            if not to_select:
+                logger.warning(
+                    f"None of requested variables found. "
+                    f"Requested: {var_list}, Available: {list(available)}"
+                )
+            else:
+                ds = ds[to_select]
+
+        # Ensure lat is monotonically increasing (ERA5 comes north→south)
+        if "lat" in ds.coords and ds.lat.values[0] > ds.lat.values[-1]:
+            ds = ds.sortby("lat")
+
+        # Apply spatial subset
+        if bbox is not None:
+            ds = self._apply_bbox(ds, bbox)
+
+        return ds
+
+    def _apply_bbox(
+        self,
+        ds: xr.Dataset,
+        bbox: BBox,
+    ) -> xr.Dataset:
+        """
+        Apply bounding box selection.
+
+        Args:
+            ds: Input dataset
+            bbox: [xmin, ymin, xmax, ymax]
+
+        Returns:
+            Spatially subset dataset
+
+        Raises:
+            ValueError: If bbox format is invalid
+        """
+        # Determine coordinate names (support lat/lon or y/x)
+        lat_coord = "lat" if "lat" in ds.coords else "y"
+        lon_coord = "lon" if "lon" in ds.coords else "x"
+
+        if lat_coord not in ds.coords or lon_coord not in ds.coords:
+            logger.warning(
+                f"Cannot apply bbox: missing coordinates. "
+                f"Available: {list(ds.coords.keys())}"
+            )
+            return ds
+
+        try:
+            return ds.sel(
+                {
+                    lat_coord: slice(bbox.ymin, bbox.ymax),
+                    lon_coord: slice(bbox.xmin, bbox.xmax),
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to apply bbox: {e}")
+            return ds
+
+    def _scan_variables_from_files(self) -> set[str]:
+        """Scan zarr files to extract variable names."""
+        if not self.store_root.exists():
+            logger.warning(f"Store directory not found: {self.store_root}")
+            return set()
+
+        zarr_files = sorted(self.store_root.glob("*.zarr"))
+
+        if not zarr_files:
+            logger.debug("No zarr files found")
+            return set()
+
+        all_vars = set()
+
+        for zarr_path in zarr_files:
+            try:
+                # Lightweight metadata-only open
+                ds = xr.open_zarr(zarr_path, decode_cf=False)
+                all_vars.update(ds.data_vars.keys())
+                ds.close()
+            except Exception as e:
+                logger.warning(f"Could not read variables from {zarr_path.name}: {e}")
+                continue
+
+        return all_vars
+
+    # ==================== Metadata Queries ====================
+    def get_variables(self) -> set[str]:
+        """
+        Get all unique variables across all zarr files.
+
+        Returns:
+            Set of variable names, empty if none found
+
+        Example:
+            >>> catalog.get_variables()
+            {'temperature', 'salinity', 'velocity_u', 'velocity_v'}
+        """
+        # Use cached catalog if available
+        if not self.df.empty and "variables" in self.df.columns:
+            # Combine variables from catalog metadata
+            all_vars = set()
+            for var_list in self.df["variables"].dropna():
+                all_vars.update(var_list)
+            return all_vars
+
+        # Fallback: scan files directly
+        return self._scan_variables_from_files()
+
+    def get_time_coverage(self) -> DateRange | None:
+        """
+        Get overall time coverage across all files.
+
+        Returns:
+            DateRange(earliest_start, latest_end) or None if no data
+        """
+        df = self.df
+
+        if df.empty:
+            return None
+
+        return DateRange(
+            start=df["start_date"].min(),
+            end=df["end_date"].max(),
+        )
+
+    def get_bbox(self) -> BBox | None:
+        """
+        Get overall geographic extent (bbox) across all files.
+        """
+        bbox = self.var_config.bbox
+        if bbox is None:
+            return None
+        if not isinstance(bbox, BBox):
+            return BBox.from_tuple(bbox)
+
+    def summary(self) -> dict:
+        """
+        Get summary statistics about the catalog.
+
+        Returns:
+            Dictionary with catalog statistics
+        """
+        df = self.df
+
+        if df.empty:
+            return {
+                "num_files": 0,
+                "time_coverage": None,
+                "variables": set(),
+                "total_timesteps": 0,
+            }
+
+        time_cov = self.get_time_coverage()
+        bbox = self.get_bbox()
+
+        return {
+            "num_files": df["path"].nunique(),
+            "time_coverage": time_cov if time_cov is not None else "No data",
+            "bbox": bbox if bbox is not None else "No data",
+            "period": self.time_resolution,
+            "variables": self.get_variables(),
+            "total_timesteps": (
+                df["num_timesteps"].sum().item()
+                if "num_timesteps" in df.columns
+                else None
+            ),
+            "store_root": str(self.store_root),
+            "catalog_path": str(self.catalog_path),
+            "last_scanned": (
+                df["scanned_at"].max() if "scanned_at" in df.columns else None
+            ),
+        }
+
+    # ==================== Migration Helpers ====================
+
+    def backfill_provenance(self, rep_end_date: DateLike) -> int:
+        """
+        Retroactively write provenance sidecars for existing Zarr files that
+        pre-date automatic tracking by Netcdf2Zarr.
+
+        For each Zarr file in store_root that has no _prov.json sidecar:
+
+        * Entire file falls within rep period  -> single rep entry.
+        * Entire file falls after rep end date -> single nrt entry
+          (only written when dataset_id_nrt is configured).
+        * File spans the rep/nrt boundary    -> two entries split at
+          rep_end_date / rep_end_date + 1 day.
+
+        Call once after upgrading. The rep end date is obtainable without
+        re-downloading data via CMEMSDownloader(var_key).get_rep_availability().end.
+
+        Args:
+            rep_end_date: Last date covered by the reprocessed (rep) dataset.
+
+        Returns:
+            Number of sidecar files written.
+
+        Example::
+
+            from h2gis.storage.zarr_catalog import ZarrCatalog
+            from h2gis.downloader.cmems_downloader import CMEMSDownloader
+
+            rep_end = CMEMSDownloader("sst").get_rep_availability().end
+            n = ZarrCatalog("sst").backfill_provenance(rep_end)
+            print(f"Written {n} sidecars")
+        """
+        rep_end = pd.to_datetime(rep_end_date).normalize()
+        nrt_start = rep_end + pd.Timedelta(days=1)
+        has_nrt = self.var_config.dataset_id_nrt is not None
+
+        if not self.store_root.exists():
+            logger.warning(f"Store root not found: {self.store_root}")
+            return 0
+
+        import zarr
+
+        written = 0
+        for zarr_path in sorted(self.store_root.glob("*.zarr")):
+            try:
+                ds = xr.open_zarr(zarr_path, consolidated=False)
+                already_set = ds.attrs.get("source_datasets") is not None
+                z_start = pd.to_datetime(ds.time.min().compute().item()).normalize()
+                z_end = pd.to_datetime(ds.time.max().compute().item()).normalize()
+                ds.close()
+            except Exception as e:
+                logger.warning(f"Could not read {zarr_path.name}: {e}")
+                continue
+
+            if already_set:
+                logger.debug(
+                    f"Provenance already in zarr attrs, skipping: {zarr_path.name}"
+                )
+                continue
+
+            records = []
+
+            if z_end <= rep_end or not has_nrt:
+                records.append(
+                    {
+                        "dataset_id": self.var_config.dataset_id_rep,
+                        "dataset_type": "rep",
+                        "start_date": z_start.strftime("%Y-%m-%d"),
+                        "end_date": z_end.strftime("%Y-%m-%d"),
+                    }
+                )
+            elif z_start > rep_end:
+                records.append(
+                    {
+                        "dataset_id": self.var_config.dataset_id_nrt,
+                        "dataset_type": "nrt",
+                        "start_date": z_start.strftime("%Y-%m-%d"),
+                        "end_date": z_end.strftime("%Y-%m-%d"),
+                    }
+                )
+            else:
+                records.append(
+                    {
+                        "dataset_id": self.var_config.dataset_id_rep,
+                        "dataset_type": "rep",
+                        "start_date": z_start.strftime("%Y-%m-%d"),
+                        "end_date": rep_end.strftime("%Y-%m-%d"),
+                    }
+                )
+                records.append(
+                    {
+                        "dataset_id": self.var_config.dataset_id_nrt,
+                        "dataset_type": "nrt",
+                        "start_date": nrt_start.strftime("%Y-%m-%d"),
+                        "end_date": z_end.strftime("%Y-%m-%d"),
+                    }
+                )
+
+            root = zarr.open_group(str(zarr_path), mode="r+")
+            root.attrs["source_datasets"] = json.dumps(records)
+
+            # Remove any legacy sidecar now that provenance lives in zarr attrs
+            prov_file = zarr_path.parent / (zarr_path.stem + "_prov.json")
+            if prov_file.exists():
+                prov_file.unlink()
+
+            logger.info(
+                f"Wrote backfilled provenance for {zarr_path.name} ({len(records)} source(s))"
+            )
+            written += 1
+
+        if written:
+            self.reload()
+            logger.info(
+                f"Backfill complete: {written} zarr file(s) updated, catalog reloaded"
+            )
+        else:
+            logger.info("Backfill complete: no files needed provenance")
+
+        return written
+
+
+if __name__ == "__main__":
+    from h2gis.config import settings
+
+    var_list = settings.get_available_var_keys()
+    for var_key in var_list:
+        repo = ZarrCatalog(var_key)
+        print(repo)
+    # stats = repo.summary()
+    # print(stats)
+    # print(repo.open_dataset(
+    #    start_date="2020-01-01",
+    #    end_date="2022-12-31"))
