@@ -11,30 +11,51 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "copernicusmarine",
-    "cdsapi",
-    "cfgrib",
-    "eccodes",
-    "polars",
-    "xarray",
-    "netCDF4",
-    "geopandas",
-    "dask",
-    "matplotlib",
-    "loguru",
-    "python-dotenv",
-    "global_land_mask",
-    "ipython",
-    "cartopy",
-    "plotly",
-    "ephem",
-    "rioxarray",
-    "msgspec",
-    "duckdb",
-    "typer",
-    "scipy",
+license = "MIT"
+keywords = ["ocean", "climate", "geospatial", "zarr", "netcdf", "cmems", "copernicus", "era5"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: GIS",
 ]
+dependencies = [
+    "cartopy>=0.23.0",
+    "cdsapi>=0.7.0",
+    "cfgrib>=0.9.10",
+    "copernicusmarine>=2.0.0",
+    "dask>=2024.1.0",
+    "duckdb>=1.0.0",
+    "eccodes>=1.7.0",
+    "ephem>=4.1.0",
+    "geopandas>=1.0.0",
+    "global_land_mask>=1.0.0",
+    "ipython>=8.0.0",
+    "loguru>=0.7.0",
+    "matplotlib>=3.8.0",
+    "msgspec>=0.18.0",
+    "netCDF4>=1.6.0",
+    "plotly>=5.18.0",
+    "polars>=1.0.0",
+    "PyYAML>=6.0.0",
+    "python-dotenv>=1.0.0",
+    "rioxarray>=0.17.0",
+    "scipy>=1.13.0",
+    "tqdm>=4.66.0",
+    "typer>=0.12.0",
+    "xarray>=2024.1.0",
+]
+
+[project.urls]
+Repository = "https://github.com/h2ugo24/h2gis"
+
+[project.scripts]
+h2gis = "h2gis.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -54,10 +75,6 @@ dev = [
     "tox>=4.30.3",
     "tox-uv>=1.28.1",
 ]
-
-
-[project.scripts]
-h2gis = "h2gis.cli:app"
 
 [tool.isort]
 profile = "black"
