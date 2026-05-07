@@ -10,7 +10,7 @@
 ## Install from source
 
 ```bash
-git clone https://github.com/h2ugo24/h2gis.git
+git clone https://github.com/h2ugoparra/h2gis.git
 cd h2gis
 uv sync
 ```

@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/h2ugo24/h2gis"
+Repository = "https://github.com/h2ugoparra/h2gis"
 
 [project.scripts]
 h2gis = "h2gis.cli:app"

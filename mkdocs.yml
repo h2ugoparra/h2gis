@@ -1,8 +1,8 @@
 site_name: h2gis
 site_description: Geospatial processing pipeline for climate and ocean data
 site_author: Hugo Parra
-repo_url: https://github.com/h2ugo24/h2gis
-repo_name: h2ugo24/h2gis
+repo_url: https://github.com/h2ugoparra/h2gis
+repo_name: h2ugoparra/h2gis
 
 theme:
   name: material

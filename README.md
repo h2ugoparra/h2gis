@@ -34,7 +34,7 @@ H2GIS supports the following data providers API keys and authentication are requ
 ### Install from source
 
 ```bash
-git clone https://github.com/h2ugo24/h2gis.git
+git clone https://github.com/h2ugoparra/h2gis.git
 cd h2gis
 uv sync          # installs all dependencies into .venv
 ```
@@ -113,7 +113,7 @@ uv run isort h2gis/
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/h2ugo24/h2gis.git).
+Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/h2ugoparra/h2gis.git).
 
 ## License
 
