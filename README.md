@@ -14,7 +14,7 @@ A Python pipeline for downloading and preprocessing multi-source oceanographic a
 
 ## Data Sources
 
-H2GIS supports the following data providers API keys and authentication are required for each:
+H2MARE supports the following data providers API keys and authentication are required for each:
 
 - **[CMEMS](https://marine.copernicus.eu/)** - Copernicus Marine Service: Satellite and in-situ ocean observations
 - **[AVISO](https://www.aviso.altimetry.fr/en/home.html)** - Archiving, Validation and Interpretation of Satellite Oceanographic data
@@ -34,8 +34,8 @@ H2GIS supports the following data providers API keys and authentication are requ
 ### Install from source
 
 ```bash
-git clone https://github.com/h2ugoparra/h2gis.git
-cd h2gis
+git clone https://github.com/h2ugoparra/h2mare.git
+cd h2mare
 uv sync          # installs all dependencies into .venv
 ```
 
@@ -113,7 +113,7 @@ uv run isort h2mare/
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/h2ugoparra/h2gis.git).
+Contributions are welcome! Please feel free to submit issues or pull requests on [GitHub](https://github.com/h2ugoparra/h2mare.git).
 
 ## License
 

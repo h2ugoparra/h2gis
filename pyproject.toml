@@ -52,7 +52,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/h2ugoparra/h2gis"
+Repository = "https://github.com/h2ugoparra/h2mare"
 
 [project.scripts]
 h2mare = "h2mare.cli:app"
