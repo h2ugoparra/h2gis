@@ -28,7 +28,7 @@ def process_ssh(ds: xr.Dataset) -> xr.Dataset:
     )
     sla_da.name = "sla_std"
 
-    ds_var = xr.merge([ds, adt_da, sla_da])
+    ds_var = xr.merge([ds, adt_da, sla_da], join="outer")
     ds_var["gke"] = (ds_var["ugos"] ** 2 + ds_var["vgos"] ** 2) * 1 / 2
     return ds_var
 
@@ -42,7 +42,7 @@ def process_chl(ds: xr.Dataset) -> xr.Dataset:
         .chunk({"time": 1, "lat": 500, "lon": 500})
     )
     ds_fdist = FrontProcessor(var_key).from_dataset(ds)
-    return xr.merge([ds, ds_fdist])
+    return xr.merge([ds, ds_fdist], join="outer")
 
 
 def process_sst(ds: xr.Dataset) -> xr.Dataset:
@@ -67,7 +67,7 @@ def process_sst(ds: xr.Dataset) -> xr.Dataset:
         .astype("float32")
     )
     ds["sst_std"] = da_std
-    return xr.merge([ds, ds_fdist])
+    return xr.merge([ds, ds_fdist], join="outer")
 
 
 def process_mld(ds: xr.Dataset) -> xr.Dataset:

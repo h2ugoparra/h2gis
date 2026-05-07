@@ -575,7 +575,7 @@ def process_atm_accum_avg(ds: xr.Dataset) -> xr.Dataset:
     )
     datasets.append(daily_total_rain(ds))
     # isel to reverse lat values order
-    merged = xr.merge(datasets, compat="override")
+    merged = xr.merge(datasets, compat="override", join="outer")
     assert isinstance(merged, xr.Dataset)
     return merged.isel(lat=slice(None, None, -1))
 
@@ -589,7 +589,7 @@ def process_atm_instante(ds: xr.Dataset) -> xr.Dataset:
     datasets.append(daily_wind(ds))
     datasets.append(daily_cloud_cover(ds))
     datasets.append(daily_sea_level_pressure(ds))
-    merged = xr.merge(datasets, compat="override")
+    merged = xr.merge(datasets, compat="override", join="outer")
     assert isinstance(merged, xr.Dataset)
     return merged.isel(lat=slice(None, None, -1))
 
@@ -599,7 +599,7 @@ def process_radiation(ds: xr.Dataset) -> xr.Dataset:
     datasets = []
     for var in ds.data_vars:
         datasets.append(daily_radiation(ds[var]).sortby("time"))
-    merged = xr.merge(datasets, compat="override")
+    merged = xr.merge(datasets, compat="override", join="outer")
     assert isinstance(merged, xr.Dataset)
     return merged.isel(lat=slice(None, None, -1))
 

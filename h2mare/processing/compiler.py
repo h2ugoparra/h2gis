@@ -175,7 +175,7 @@ class Compiler:
                 )
                 continue
 
-            ds_final = xr.merge(datasets)
+            ds_final = xr.merge(datasets, join="outer")
             assert isinstance(ds_final, xr.Dataset)
             ds_final = chunk_dataset(ds_final)
             ds_final = self._set_attrs(ds_final)

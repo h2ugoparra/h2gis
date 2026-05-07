@@ -237,7 +237,7 @@ class EDDIESProcessor:
                     ds_list.append(ds_year)
 
             if ds_list:
-                merged = xr.merge(ds_list)
+                merged = xr.merge(ds_list, join="outer")
                 assert isinstance(merged, xr.Dataset)
                 ds_merged = chunk_dataset(merged)
                 path = ZarrCatalog(self.var_key).build_file_path(
