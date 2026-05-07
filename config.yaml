@@ -1,13 +1,4 @@
 # -----------------------
-# Spatial Parameters
-# -----------------------
-spatial:
-  geo_extent: [-80, 0, 10, 70]
-  depth_range: [0, 1000]  # for o2 variables
-  dx: 0.25
-  dy: 0.25
-
-# -----------------------
 # Variable Configurations
 # -----------------------
 variables:
