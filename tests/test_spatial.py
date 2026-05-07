@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from h2gis.types import BBox
-from h2gis.utils.spatial import (
+from h2mare.types import BBox
+from h2mare.utils.spatial import (
     GridBuilder,
     clip_land_data,
     haversine_min_distance_kdtree,

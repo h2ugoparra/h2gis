@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from h2gis.storage.xarray_helpers import (
+from h2mare.storage.xarray_helpers import (
     chunk_dataset,
     convert360_180,
     get_dataset_encoding,

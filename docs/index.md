@@ -1,4 +1,4 @@
-# h2gis
+# h2mare
 
 **Geospatial processing pipeline for climate and ocean data.**
 

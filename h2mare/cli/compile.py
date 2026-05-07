@@ -1,0 +1,99 @@
+"""
+h2mare compile — merge per-variable Zarr stores into a unified h2ds dataset.
+
+Reads the individual per-variable Zarr stores and interpolates them to a
+common 0.25° daily grid, writing the result as the h2ds compiled dataset.
+When no dates are given the step infers what is missing from the local store.
+
+Examples
+--------
+    # Compile all available variables (dates inferred from store)
+    uv run h2mare compile
+
+    # Compile specific variables over a date range
+    uv run h2mare compile -v sst -v ssh -v mld --start-date 2024-01-01 --end-date 2024-12-31
+
+    # Compile with a custom store path
+    uv run h2mare compile --store-path D:/GlobalData
+"""
+
+from pathlib import Path
+from typing import List, Optional
+
+import pandas as pd
+import typer
+from loguru import logger
+
+from h2mare.config import settings
+
+app = typer.Typer()
+
+
+def compile(
+    vars: Optional[List[str]] = typer.Option(
+        None,
+        "--vars",
+        "-v",
+        help=(
+            "Variable key(s) to compile (repeat for multiple: -v sst -v ssh). "
+            "Defaults to all available keys."
+        ),
+    ),
+    start_date: Optional[str] = typer.Option(
+        None,
+        "--start-date",
+        help="Start date (YYYY-MM-DD). Must be paired with --end-date.",
+    ),
+    end_date: Optional[str] = typer.Option(
+        None,
+        "--end-date",
+        help="End date (YYYY-MM-DD). Must be paired with --start-date.",
+    ),
+    store_path: Optional[Path] = typer.Option(
+        None,
+        "--store-path",
+        help="Override the Zarr store root (defaults to STORE_DIR from .env).",
+    ),
+) -> None:
+    """Merge per-variable Zarr stores into the unified h2ds compiled dataset."""
+
+    log_path = settings.LOGS_DIR / "h2mare.log"
+    logger.add(log_path, level="INFO")
+
+    if bool(start_date) ^ bool(end_date):
+        typer.echo(
+            "Error: --start-date and --end-date must be provided together.", err=True
+        )
+        raise typer.Exit(code=1)
+
+    if start_date and end_date:
+        start_ts = pd.Timestamp(start_date)
+        end_ts = pd.Timestamp(end_date)
+        if start_ts >= end_ts:
+            typer.echo(
+                f"Error: --start-date ({start_date}) must be before --end-date ({end_date}).",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+    if vars:
+        available = set(settings.app_config.variables.keys())
+        unknown = set(vars) - available
+        if unknown:
+            typer.echo(
+                f"Error: unknown variable key(s): {', '.join(sorted(unknown))}. "
+                f"Available: {', '.join(sorted(available))}.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+    from h2mare.processing.compiler import Compiler
+
+    Compiler(remote_store_root=store_path or settings.STORE_DIR).run(
+        start_date=start_date,
+        end_date=end_date,
+        var_keys=list(vars) if vars else None,
+    )
+
+
+app.command()(compile)

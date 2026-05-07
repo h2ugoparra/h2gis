@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from h2gis.types import BBox, DateRange
-from h2gis.utils.labels import create_filename_label, create_label_from_dataset
+from h2mare.types import BBox, DateRange
+from h2mare.utils.labels import create_filename_label, create_label_from_dataset
 
 
 class TestCreateFilenameLabel:

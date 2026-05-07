@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from h2gis.storage.storage import _append_data, write_append_zarr
+from h2mare.storage.storage import _append_data, write_append_zarr
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ class TestNewWrite:
         def bad_open(*args, **kwargs):
             raise OSError("simulated corruption")
 
-        monkeypatch.setattr("h2gis.storage.storage.xr.open_zarr", bad_open)
+        monkeypatch.setattr("h2mare.storage.storage.xr.open_zarr", bad_open)
 
         with pytest.raises(RuntimeError, match="verification failed"):
             write_append_zarr("sst", _make_ds(), path)
@@ -108,7 +108,7 @@ class TestAtomicSwap:
                 raise OSError("simulated disk full")
             return original_move(src, dst)
 
-        with patch("h2gis.storage.storage.shutil.move", side_effect=failing_move):
+        with patch("h2mare.storage.storage.shutil.move", side_effect=failing_move):
             with pytest.raises(RuntimeError, match="original restored from backup"):
                 _append_data("sst", _make_ds("2020-01-06", 5), path)
 
@@ -131,7 +131,7 @@ class TestAtomicSwap:
                 raise OSError("simulated disk full")
             return original_move(src, dst)
 
-        with patch("h2gis.storage.storage.shutil.move", side_effect=failing_move):
+        with patch("h2mare.storage.storage.shutil.move", side_effect=failing_move):
             with pytest.raises(RuntimeError):
                 _append_data("sst", _make_ds("2020-01-06", 5), path)
 

@@ -3,7 +3,7 @@ import pytest
 import polars as pl
 from datetime import date
 
-from h2gis.storage.parquet_indexer import ParquetIndexer
+from h2mare.storage.parquet_indexer import ParquetIndexer
 from conftest import make_grid_df
 
 

@@ -4,9 +4,9 @@ import pytest
 import msgspec
 import pandas as pd
 
-from h2gis.models import AppConfig
-from h2gis.downloader.aviso_downloader import AVISODownloader
-from h2gis.types import DateRange
+from h2mare.models import AppConfig
+from h2mare.downloader.aviso_downloader import AVISODownloader
+from h2mare.types import DateRange
 
 
 # ---------------------------------------------------------------------------
@@ -175,9 +175,9 @@ class TestWarnIfRepUpdated:
             "end_date": pd.Timestamp("2022-12-31"),
         }])
 
-        from h2gis.storage.zarr_catalog import ZarrCatalog
+        from h2mare.storage.zarr_catalog import ZarrCatalog
         with patch.object(ZarrCatalog, "df", new_callable=lambda: property(lambda self: catalog_df)):
-            with patch("h2gis.downloader.base.logger") as mock_logger:
+            with patch("h2mare.downloader.base.logger") as mock_logger:
                 # API reports rep ending 2023-12-31 — one year newer
                 dl._warn_if_rep_updated(pd.Timestamp("2023-12-31"))
 
@@ -195,18 +195,18 @@ class TestWarnIfRepUpdated:
             "end_date": pd.Timestamp("2023-12-31"),
         }])
 
-        from h2gis.storage.zarr_catalog import ZarrCatalog
+        from h2mare.storage.zarr_catalog import ZarrCatalog
         with patch.object(ZarrCatalog, "df", new_callable=lambda: property(lambda self: catalog_df)):
-            with patch("h2gis.downloader.base.logger") as mock_logger:
+            with patch("h2mare.downloader.base.logger") as mock_logger:
                 dl._warn_if_rep_updated(pd.Timestamp("2023-12-31"))
 
         mock_logger.warning.assert_not_called()
 
     def test_no_warning_when_catalog_is_empty(self, dl):
         import pandas as pd
-        from h2gis.storage.zarr_catalog import ZarrCatalog
+        from h2mare.storage.zarr_catalog import ZarrCatalog
         with patch.object(ZarrCatalog, "df", new_callable=lambda: property(lambda self: pd.DataFrame())):
-            with patch("h2gis.downloader.base.logger") as mock_logger:
+            with patch("h2mare.downloader.base.logger") as mock_logger:
                 dl._warn_if_rep_updated(pd.Timestamp("2023-12-31"))
 
         mock_logger.warning.assert_not_called()

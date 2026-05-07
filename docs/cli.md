@@ -1,15 +1,15 @@
 # CLI Reference
 
-All commands are run via `uv run h2gis <command> [options]`.
+All commands are run via `uv run h2mare <command> [options]`.
 
 ---
 
-## `h2gis run`
+## `h2mare run`
 
 Download raw data and convert it to Zarr for one or more variable keys.
 
 ```
-uv run h2gis run [OPTIONS]
+uv run h2mare run [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
@@ -28,35 +28,35 @@ When `--start-date` / `--end-date` are omitted the pipeline infers the missing d
 
 ```bash
 # First-time download with explicit dates
-uv run h2gis run -v sst --start-date 2021-01-01 --end-date 2021-12-31
+uv run h2mare run -v sst --start-date 2021-01-01 --end-date 2021-12-31
 
 # Update an existing store (dates inferred automatically)
-uv run h2gis run -v sst
+uv run h2mare run -v sst
 
 # Multiple variables at once
-uv run h2gis run -v sst -v ssh -v mld
+uv run h2mare run -v sst -v ssh -v mld
 
 # Download only, skip Zarr conversion
-uv run h2gis run -v sst --no-convert
+uv run h2mare run -v sst --no-convert
 
 # Skip the compile step after conversion
-uv run h2gis run -v sst --no-compile
+uv run h2mare run -v sst --no-compile
 
 # Validate configuration without downloading
-uv run h2gis run -v sst --dry-run
+uv run h2mare run -v sst --dry-run
 
 # Process all configured variables
-uv run h2gis run
+uv run h2mare run
 ```
 
 ---
 
-## `h2gis compile`
+## `h2mare compile`
 
 Merge per-variable Zarr stores into the unified h2ds compiled dataset.
 
 ```
-uv run h2gis compile [OPTIONS]
+uv run h2mare compile [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
@@ -70,23 +70,23 @@ uv run h2gis compile [OPTIONS]
 
 ```bash
 # Compile all variables (dates inferred)
-uv run h2gis compile
+uv run h2mare compile
 
 # Compile a subset of variables over a specific period
-uv run h2gis compile -v sst -v ssh -v mld --start-date 2024-01-01 --end-date 2024-12-31
+uv run h2mare compile -v sst -v ssh -v mld --start-date 2024-01-01 --end-date 2024-12-31
 
 # Use a custom store path
-uv run h2gis compile --store-path D:/GlobalData
+uv run h2mare compile --store-path D:/GlobalData
 ```
 
 ---
 
-## `h2gis convert`
+## `h2mare convert`
 
 Convert already-downloaded raw files to Zarr without re-downloading.
 
 ```
-uv run h2gis convert [OPTIONS]
+uv run h2mare convert [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
@@ -97,7 +97,7 @@ uv run h2gis convert [OPTIONS]
 
 ```bash
 # Convert downloaded files for sst and ssh
-uv run h2gis convert -v sst -v ssh
+uv run h2mare convert -v sst -v ssh
 ```
 
 ---

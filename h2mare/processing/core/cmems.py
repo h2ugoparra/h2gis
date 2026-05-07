@@ -1,0 +1,76 @@
+"""Function to process downloaded datasets from CMEMS"""
+
+import xarray as xr
+from loguru import logger
+
+from h2mare.processing.core.fronts import FrontProcessor
+from h2mare.storage.xarray_helpers import ds_float64_to_float32
+
+
+def process_ssh(ds: xr.Dataset) -> xr.Dataset:
+    """Process sea surface height vars: adt and sla _std and gke (geostrophic kinentic energy variables"""
+
+    # Convert o float32 and 1 time step to avoid memory issues
+    ds = ds_float64_to_float32(ds).chunk({"time": 1, "lat": -1, "lon": -1})
+
+    adt_da = (
+        ds["adt"]
+        .rolling(lon=3, lat=3, center=True, min_periods=1)
+        .std(skipna=True)
+        .compute()
+    )
+    adt_da.name = "adt_std"
+
+    sla_da = (
+        ds["sla"]
+        .rolling(lon=3, lat=3, center=True, min_periods=1)
+        .std(skipna=True)
+        .compute()
+    )
+    sla_da.name = "sla_std"
+
+    ds_var = xr.merge([ds, adt_da, sla_da])
+    ds_var["gke"] = (ds_var["ugos"] ** 2 + ds_var["vgos"] ** 2) * 1 / 2
+    return ds_var
+
+
+def process_chl(ds: xr.Dataset) -> xr.Dataset:
+    """Process chlorophyll dataset"""
+    var_key = "chl"
+    ds = (
+        ds.rename_vars({"CHL": var_key})
+        .astype("float32")
+        .chunk({"time": 1, "lat": 500, "lon": 500})
+    )
+    ds_fdist = FrontProcessor(var_key).from_dataset(ds)
+    return xr.merge([ds, ds_fdist])
+
+
+def process_sst(ds: xr.Dataset) -> xr.Dataset:
+    """Process sea surface temperature downloaded dataset"""
+    var_key = "sst"
+    ds = ds.rename_vars({"analysed_sst": var_key})
+    ds["sst"] = (
+        (ds["sst"] - 273.15)
+        .astype("float32")
+        .chunk({"time": 1, "lat": 500, "lon": 500})
+    )
+
+    # Run front detection process (lazy)
+    ds_fdist = FrontProcessor(var_key).from_dataset(ds)
+
+    # Calculate sea surface temperature standard deviation
+    da_std = (
+        ds["sst"]
+        .rolling(lon=3, lat=3, center=True, min_periods=1)
+        .construct(lon="lon_win", lat="lat_win")
+        .std(dim=["lon_win", "lat_win"], skipna=True)
+        .astype("float32")
+    )
+    ds["sst_std"] = da_std
+    return xr.merge([ds, ds_fdist])
+
+
+def process_mld(ds: xr.Dataset) -> xr.Dataset:
+    """Process mixed layer depth dataset"""
+    return ds.rename_vars({"mlotst": "mld"})

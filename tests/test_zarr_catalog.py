@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from h2gis.models import AppConfig
-from h2gis.storage.zarr_catalog import ZarrCatalog
+from h2mare.models import AppConfig
+from h2mare.storage.zarr_catalog import ZarrCatalog
 
 
 # ---------------------------------------------------------------------------

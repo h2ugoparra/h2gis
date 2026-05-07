@@ -170,7 +170,7 @@ variables:
     local_folder: h2ds
     variables: []
     dataset_id_rep: compiled-data-0.25deg-P1D
-    source: h2gis
+    source: h2mare
     pattern: ()
     subset: true
     bbox: [-80, 0, 10, 70]
@@ -179,7 +179,7 @@ variables:
 global_attrs:
   title: h2ds - Integrated Geospatial Dataset Collection for the North Atlantic
   source: Various reanalysis and observational datasets from CMEMS/AVISO/NCEI-ETOPO/CDS-ERA5
-  project: h2gis - Geospatial Processing for Climate and Ocean Data
+  project: h2mare - Geospatial Processing for Climate and Ocean Data
   creator_name: Hugo Parra
   creator_email: h2ugo.parra@pm.me
   date_created: '2024-06-12'

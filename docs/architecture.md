@@ -7,7 +7,7 @@ H2GIS is a three-stage pipeline: **Download → Convert → Compile**, with an o
 ## Pipeline overview
 
 ```
-CLI (h2gis/cli/main.py)
+CLI (h2mare/cli/main.py)
   └── PipelineManager (pipeline_manager.py)
         ├── Downloader          → raw NetCDF / GRIB  →  data/raw/downloads/
         ├── Netcdf2Zarr         → regridded Zarr      →  $STORE_DIR/<local_folder>/

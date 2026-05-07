@@ -3,8 +3,8 @@ import pytest
 import msgspec
 from unittest.mock import MagicMock, patch, call
 
-from h2gis.models import AppConfig
-from h2gis.pipeline_manager import PipelineManager
+from h2mare.models import AppConfig
+from h2mare.pipeline_manager import PipelineManager
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class TestDownloadFailureIsolation:
         # sst download fails; chl succeeds
         downloader_cls.return_value.run.side_effect = [RuntimeError("network error"), True]
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             MockConverter.return_value.run.return_value = None
             manager.run()
 
@@ -58,7 +58,7 @@ class TestDownloadFailureIsolation:
         cfg = _make_config("sst")
         manager, _ = _make_manager(cfg, tmp_path)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             MockConverter.return_value.run.side_effect = RuntimeError("zarr error")
             manager.run()  # should not raise
 
@@ -67,7 +67,7 @@ class TestDownloadFailureIsolation:
         cfg = _make_config("sst", "chl")
         manager, _ = _make_manager(cfg, tmp_path)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             MockConverter.return_value.run.side_effect = [RuntimeError("zarr error"), None]
             manager.run()
 
@@ -85,7 +85,7 @@ class TestDryRun:
         cfg = _make_config("sst", "chl")
         manager, _ = _make_manager(cfg, tmp_path, dry_run=True)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             manager.run()
 
         MockConverter.assert_not_called()
@@ -95,7 +95,7 @@ class TestDryRun:
         cfg = _make_config("sst")
         manager, _ = _make_manager(cfg, tmp_path, no_convert=True)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             manager.run()
 
         MockConverter.assert_not_called()
@@ -105,7 +105,7 @@ class TestDryRun:
         cfg = _make_config("sst")
         manager, downloader_cls = _make_manager(cfg, tmp_path, dry_run=True)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr"):
             manager.run()
 
         downloader_cls.return_value.run.assert_called_once_with(
@@ -121,7 +121,7 @@ class TestDryRun:
             end_date="2020-12-31",
         )
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr"):
             manager.run()
 
         downloader_cls.return_value.run.assert_called_once_with(
@@ -142,7 +142,7 @@ class TestVariableFiltering:
         cfg = _make_config("sst", "h2ds", "bathy", "moon")
         manager, downloader_cls = _make_manager(cfg, tmp_path)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr"):
             manager.run()
 
         # Only 'sst' should have a downloader instantiated
@@ -154,7 +154,7 @@ class TestVariableFiltering:
         # Registry missing 'cmems' → no downloader found
         manager = PipelineManager(cfg, {}, tmp_path)
 
-        with patch("h2gis.pipeline_manager.Netcdf2Zarr") as MockConverter:
+        with patch("h2mare.pipeline_manager.Netcdf2Zarr") as MockConverter:
             manager.run()  # should not raise
 
         MockConverter.assert_not_called()
@@ -175,8 +175,8 @@ class TestCleanup:
         empty_dir = tmp_path / "downloads" / "sst"
         empty_dir.mkdir(parents=True)
 
-        with patch("h2gis.pipeline_manager.settings") as mock_settings, \
-             patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+        with patch("h2mare.pipeline_manager.settings") as mock_settings, \
+             patch("h2mare.pipeline_manager.Netcdf2Zarr"):
             mock_settings.DOWNLOADS_DIR = tmp_path / "downloads"
             manager.run()
 
@@ -191,8 +191,8 @@ class TestCleanup:
         non_empty_dir.mkdir(parents=True)
         (non_empty_dir / "data.nc").write_text("data")
 
-        with patch("h2gis.pipeline_manager.settings") as mock_settings, \
-             patch("h2gis.pipeline_manager.Netcdf2Zarr"):
+        with patch("h2mare.pipeline_manager.settings") as mock_settings, \
+             patch("h2mare.pipeline_manager.Netcdf2Zarr"):
             mock_settings.DOWNLOADS_DIR = tmp_path / "downloads"
             manager.run()
 
@@ -200,9 +200,9 @@ class TestCleanup:
 
     def test_cleanup_empty_download_dir_removes_on_dry_run(self, tmp_path):
         """_cleanup_empty_download_dir removes an empty folder even during dry-run."""
-        from h2gis.downloader.base import BaseDownloader
+        from h2mare.downloader.base import BaseDownloader
         import msgspec
-        from h2gis.models import AppConfig
+        from h2mare.models import AppConfig
 
         cfg = msgspec.convert(
             {"variables": {"sst": {
@@ -222,7 +222,7 @@ class TestCleanup:
         class _DummyDownloader(BaseDownloader):
             def run(self, *a, **kw): ...
 
-        with patch("h2gis.downloader.base.settings") as mock_settings:
+        with patch("h2mare.downloader.base.settings") as mock_settings:
             mock_settings.app_config = cfg
             mock_settings.DOWNLOADS_DIR = tmp_path
             mock_settings.STORE_DIR = None

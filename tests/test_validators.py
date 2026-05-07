@@ -2,9 +2,9 @@
 import msgspec
 import pytest
 
-from h2gis.models import AppConfig
-from h2gis.types import TimeResolution
-from h2gis.validators import (
+from h2mare.models import AppConfig
+from h2mare.types import TimeResolution
+from h2mare.validators import (
     validate_time_resolution,
     validate_var_key,
     validate_var_keys,

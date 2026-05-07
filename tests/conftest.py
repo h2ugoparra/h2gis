@@ -1,4 +1,4 @@
-"""Shared fixtures for h2gis test suite."""
+"""Shared fixtures for h2mare test suite."""
 import pytest
 import numpy as np
 import pandas as pd
@@ -68,7 +68,7 @@ def parquet_dir(tmp_path):
 @pytest.fixture
 def loaded_indexer(parquet_dir, jan_df):
     """ParquetIndexer with january data pre-loaded."""
-    from h2gis.storage.parquet_indexer import ParquetIndexer
+    from h2mare.storage.parquet_indexer import ParquetIndexer
     idx = ParquetIndexer(parquet_dir)
     idx.add_data(jan_df)
     return idx

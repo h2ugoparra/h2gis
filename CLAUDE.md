@@ -10,28 +10,28 @@ uv sync
 uv sync --dev   # include dev dependencies (pytest, black, isort)
 
 # Run the pipeline CLI
-uv run h2gis run -v sst --start-date 2021-01-01 --end-date 2021-12-31
-uv run h2gis run -v sst                    # infers dates from existing store
-uv run h2gis run -v sst -v ssh             # multiple variables
-uv run h2gis run -v sst --no-convert       # download only, skip Zarr conversion
-uv run h2gis run -v sst --no-compile       # skip compile step
-uv run h2gis run -v sst --dry-run          # validate without downloading
-uv run h2gis run                           # process all configured variables
+uv run h2mare run -v sst --start-date 2021-01-01 --end-date 2021-12-31
+uv run h2mare run -v sst                    # infers dates from existing store
+uv run h2mare run -v sst -v ssh             # multiple variables
+uv run h2mare run -v sst --no-convert       # download only, skip Zarr conversion
+uv run h2mare run -v sst --no-compile       # skip compile step
+uv run h2mare run -v sst --dry-run          # validate without downloading
+uv run h2mare run                           # process all configured variables
 
 # Compile h2ds dataset
-uv run h2gis compile                       # all variables, inferred dates
-uv run h2gis compile -v sst -v ssh --start-date 2024-01-01 --end-date 2024-12-31
+uv run h2mare compile                       # all variables, inferred dates
+uv run h2mare compile -v sst -v ssh --start-date 2024-01-01 --end-date 2024-12-31
 
 # Convert already-downloaded files to Zarr (no download)
-uv run h2gis convert -v sst -v ssh
+uv run h2mare convert -v sst -v ssh
 
 # Run tests
 uv run pytest tests/
 uv run pytest tests/test_types.py          # run a single test file
 
 # Format
-uv run black h2gis/
-uv run isort h2gis/
+uv run black h2mare/
+uv run isort h2mare/
 
 # Add / remove dependencies
 uv add <package>
@@ -43,7 +43,7 @@ uv remove <package>
 The project is a three-stage pipeline: **Download → Convert → Extract**
 
 ```
-CLI (h2gis/cli/main.py)
+CLI (h2mare/cli/main.py)
   └── PipelineManager (pipeline_manager.py)
         ├── Downloader (downloader/)       → raw NetCDF/GRIB files
         └── Netcdf2Zarr (format_converters/) → regridded Zarr at 0.25°/daily
@@ -51,11 +51,11 @@ CLI (h2gis/cli/main.py)
 
 **Download** — Three downloader classes (`CMEMSDownloader`, `AVISODownloader`, `CDSDownloader`) fetch raw files from their respective APIs into `data/raw/downloads/`. Configuration per variable lives in `config.yaml` under each variable key (dataset IDs, bounding boxes, depth ranges, file naming patterns).
 
-**Convert** — `Netcdf2Zarr` reads raw files, regrids to 0.25° × 0.25° and interpolates to daily resolution, then writes Zarr stores to `$STORE_DIR/<local_folder>/`. `ZarrCatalog` in `h2gis/storage/zarr_catalog.py` tracks what has been processed via a Parquet index so partial runs can resume.
+**Convert** — `Netcdf2Zarr` reads raw files, regrids to 0.25° × 0.25° and interpolates to daily resolution, then writes Zarr stores to `$STORE_DIR/<local_folder>/`. `ZarrCatalog` in `h2mare/storage/zarr_catalog.py` tracks what has been processed via a Parquet index so partial runs can resume.
 
-**Extract** — `Extractor` (`h2gis/processing/extractor.py`) reads Zarr stores and extracts time series at point locations (CSV) or geometries (SHP) using concurrent `ThreadPoolExecutor` workers.
+**Extract** — `Extractor` (`h2mare/processing/extractor.py`) reads Zarr stores and extracts time series at point locations (CSV) or geometries (SHP) using concurrent `ThreadPoolExecutor` workers.
 
-`Compiler` (`h2gis/processing/compiler.py`) handles regridding and per-source preprocessing details that are delegated to `h2gis/processing/core/{cmems,aviso,cds,fronts}.py`.
+`Compiler` (`h2mare/processing/compiler.py`) handles regridding and per-source preprocessing details that are delegated to `h2mare/processing/core/{cmems,aviso,cds,fronts}.py`.
 
 ## Configuration
 
@@ -68,9 +68,9 @@ CLI (h2gis/cli/main.py)
 
 **`.env`** — Must define `STORE_DIR` (path to external storage for Zarr output). Also used for AVISO FTP credentials.
 
-**`h2gis/config.py`** — `Settings` class (lazy-loaded singleton) manages path resolution and exposes the parsed `AppConfig`.
+**`h2mare/config.py`** — `Settings` class (lazy-loaded singleton) manages path resolution and exposes the parsed `AppConfig`.
 
-**`h2gis/models.py`** — `AppConfig`, `VariablesConfig`, `KeyVarConfigEntry` are `msgspec.Struct` types that represent the parsed config.
+**`h2mare/models.py`** — `AppConfig`, `VariablesConfig`, `KeyVarConfigEntry` are `msgspec.Struct` types that represent the parsed config.
 
 ## Key Types
 

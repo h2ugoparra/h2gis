@@ -1,8 +1,8 @@
-# H2GIS - Geospatial Processing for Climate and Ocean Data
+# H2MARE - Geospatial Processing for Climate and Ocean Data
 
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 
-A Python pipeline for downloading and preprocessing multi-source oceanographic and atmospheric data into analysis-ready formats. H2GIS streamlines the acquisition and harmonization of data from major climate and ocean observation services, optimized for large-scale spatiotemporal analysis.
+A Python pipeline for downloading and preprocessing multi-source oceanographic and atmospheric data into analysis-ready formats. H2MARE streamlines the acquisition and harmonization of data from major climate and ocean observation services, optimized for large-scale spatiotemporal analysis.
 
 ## Features
 
@@ -60,29 +60,29 @@ Edit `config.yaml` to define variable groups and processing parameters.
 ### Data Flow
 
 - **Dowload** -  Raw NetCDF/GRIB files are fetched from configurated sources and saved at specified time resolution (monthly or yearly) as native-resolution Zarr files.
-- **Compilation** (`h2gis/processing/compiler.py`) - Preprocessed data is regridded to a defined spatial/temporal resolution and geographic extent (configured via 'h2ds' key in `config.yaml`)
-- **Extraction** (`h2gis/processing/extractor.py`) - Point (CSV files) or geometry (SHP files) data extraction from xarray datasets.
+- **Compilation** (`h2mare/processing/compiler.py`) - Preprocessed data is regridded to a defined spatial/temporal resolution and geographic extent (configured via 'h2ds' key in `config.yaml`)
+- **Extraction** (`h2mare/processing/extractor.py`) - Point (CSV files) or geometry (SHP files) data extraction from xarray datasets.
 
 ## Quick Start
 
 ```bash
 # Download and process a single variable for a specific date range
-uv run h2gis run sst --start-date 2021-01-01 --end-date 2021-12-31
+uv run h2mare run sst --start-date 2021-01-01 --end-date 2021-12-31
 
 # Multiple variables at once (space-separated)
-uv run h2gis run seapodym mld o2 chl
+uv run h2mare run seapodym mld o2 chl
 
 # Infer missing dates from the existing store and download what's new
-uv run h2gis run sst
+uv run h2mare run sst
 
 # Download only (skip Zarr conversion)
-uv run h2gis run sst --no-process
+uv run h2mare run sst --no-process
 
 # Validate configuration without downloading
-uv run h2gis run sst --dry-run
+uv run h2mare run sst --dry-run
 
 # Process all configured variables
-uv run h2gis run
+uv run h2mare run
 ```
 
 ## Development
@@ -95,8 +95,8 @@ uv run pytest tests/
 uv run pytest tests/test_zarr_catalog.py -v
 
 # Format code
-uv run black h2gis/
-uv run isort h2gis/
+uv run black h2mare/
+uv run isort h2mare/
 ```
 
 ## Built with

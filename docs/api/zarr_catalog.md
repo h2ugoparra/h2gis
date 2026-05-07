@@ -3,7 +3,7 @@
 `ZarrCatalog` maintains a Parquet index for a single variable key, enabling efficient temporal range queries without opening every Zarr file.
 
 ```python
-from h2gis.storage.zarr_catalog import ZarrCatalog
+from h2mare.storage.zarr_catalog import ZarrCatalog
 
 catalog = ZarrCatalog("sst")
 print(catalog)                          # summary: coverage, bbox, file count

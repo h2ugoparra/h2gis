@@ -4,13 +4,13 @@ import polars as pl
 import numpy as np
 from datetime import date
 
-from h2gis.storage.parquet_helpers import (
+from h2mare.storage.parquet_helpers import (
     polars_float64_to_float32,
     aggregate_by_time,
     aggregate_by_space_time,
     _required_columns,
 )
-from h2gis.utils.plot import split_by_group, df_to_grid
+from h2mare.utils.plot import split_by_group, df_to_grid
 
 
 # ---------------------------------------------------------------------------

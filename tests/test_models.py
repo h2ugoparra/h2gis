@@ -2,7 +2,7 @@
 import pytest
 import msgspec
 
-from h2gis.models import AppConfig, KeyVarConfigEntry, SecretsConfig
+from h2mare.models import AppConfig, KeyVarConfigEntry, SecretsConfig
 
 
 # ---------------------------------------------------------------------------

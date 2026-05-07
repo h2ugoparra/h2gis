@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "h2gis"
+name = "h2mare"
 version = "0.1.0"
 description = "Downloader and data management tools for climate and ocean datasets."
 authors = [
@@ -55,11 +55,11 @@ dependencies = [
 Repository = "https://github.com/h2ugoparra/h2gis"
 
 [project.scripts]
-h2gis = "h2gis.cli:app"
+h2mare = "h2mare.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["h2gis*"]
+include = ["h2mare*"]
 
 [tool.uv]
 # sparse>=0.15 breaks copernicusmarine.subset

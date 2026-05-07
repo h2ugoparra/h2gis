@@ -3,7 +3,7 @@ import pytest
 import pandas as pd
 from datetime import date, datetime
 
-from h2gis.utils.datetime_utils import (
+from h2mare.utils.datetime_utils import (
     to_datetime,
     normalize_date,
     more_than_one_year,

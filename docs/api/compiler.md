@@ -3,7 +3,7 @@
 `Compiler` reads per-variable Zarr stores, interpolates them to a common 0.25° daily grid, and writes the merged `h2ds` dataset.
 
 ```python
-from h2gis.processing.compiler import Compiler
+from h2mare.processing.compiler import Compiler
 
 Compiler().run(start_date="2024-01-01", end_date="2024-12-31")
 ```

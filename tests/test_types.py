@@ -6,7 +6,7 @@ import pandas as pd
 import xarray as xr
 from datetime import date, datetime
 
-from h2gis.types import DateRange, BBox, DownloadTask
+from h2mare.types import DateRange, BBox, DownloadTask
 
 
 # ---------------------------------------------------------------------------

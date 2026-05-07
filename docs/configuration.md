@@ -53,7 +53,7 @@ The special `h2ds` variable defines the output grid for the compile step:
   h2ds:
     local_folder: h2ds
     dataset_id_rep: compiled-data-0.25deg-P1D
-    source: h2gis
+    source: h2mare
     bbox: [-80, 0, 10, 70]
 ```
 
@@ -80,4 +80,4 @@ CDS / ERA5 credentials are handled by the `cdsapi` package and stored in `~/.cds
 
 1. Add an entry under `variables:` in `config.yaml` with the correct `source`, `dataset_id_rep`, and `local_folder`.
 2. Add `variable_attrs` entries for each output variable name (used to set metadata in compiled Zarr files).
-3. If the source is new, implement a downloader class inheriting from `BaseDownloader` and register it in `h2gis/cli/main.py`.
+3. If the source is new, implement a downloader class inheriting from `BaseDownloader` and register it in `h2mare/cli/main.py`.

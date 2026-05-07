@@ -9,7 +9,7 @@ Three downloader classes share a common interface. All inherit from `BaseDownloa
 Downloads data from the Copernicus Marine Service using the `copernicusmarine` Python client.
 
 ```python
-from h2gis.downloader.cmems_downloader import CMEMSDownloader
+from h2mare.downloader.cmems_downloader import CMEMSDownloader
 
 dl = CMEMSDownloader("sst")
 dl.run(start_date="2024-01-01", end_date="2024-12-31")
@@ -26,7 +26,7 @@ Automatically switches from the reprocessed (`rep`) dataset to the near-real-tim
 Downloads files from AVISO via FTP. Credentials are read from `.env`.
 
 ```python
-from h2gis.downloader.aviso_downloader import AVISODownloader
+from h2mare.downloader.aviso_downloader import AVISODownloader
 
 dl = AVISODownloader("fsle")
 dl.run(start_date="2024-01-01", end_date="2024-12-31")
@@ -41,7 +41,7 @@ dl.run(start_date="2024-01-01", end_date="2024-12-31")
 Downloads ERA5 data from the Copernicus Climate Data Store using `cdsapi`.
 
 ```python
-from h2gis.downloader.cds_downloader import CDSDownloader
+from h2mare.downloader.cds_downloader import CDSDownloader
 
 dl = CDSDownloader("atm-instante")
 dl.run(start_date="2024-01-01", end_date="2024-12-31")

@@ -3,7 +3,7 @@
 `Extractor` reads h2ds Zarr stores and extracts time series at point locations (CSV) or spatial geometries (SHP).
 
 ```python
-from h2gis.processing.extractor import Extractor
+from h2mare.processing.extractor import Extractor
 
 extractor = Extractor()
 extractor.run(

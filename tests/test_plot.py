@@ -45,19 +45,19 @@ def _timed_df(months: list[int] | None = None) -> pl.DataFrame:
 class TestPlotMapsErrors:
 
     def test_raises_on_empty_df(self):
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         with pytest.raises(ValueError, match="No data"):
             plot_maps(pl.DataFrame(), "sst", agg_by="month")
 
     def test_raises_on_missing_var(self):
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _monthly_df()
         with pytest.raises(Exception):
             plot_maps(df, "chl", agg_by="month")
 
     def test_raises_when_group_col_absent_and_time_col_missing(self):
         """Neither 'month' nor the specified time_col present → ValueError."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         # df has no 'month' and no 'time' column
         df = _monthly_df()  # has 'month', drop it; result has no 'time' either
         df_no_group = df.drop("month")
@@ -73,7 +73,7 @@ class TestPlotMapsAutoDerive:
 
     def test_month_derived_from_time_col(self, tmp_path):
         """month column is derived from time_col when absent."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _timed_df(months=[1, 2, 3])
         save = tmp_path / "month.png"
         plot_maps(df, "sst", agg_by="month", time_col="time", save_path=save)
@@ -81,7 +81,7 @@ class TestPlotMapsAutoDerive:
 
     def test_season_derived_from_time_col(self, tmp_path):
         """season column is derived with correct meteorological labels."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         # One month per season: Feb(winter), May(spring), Aug(summer), Nov(autumn)
         df = _timed_df(months=[2, 5, 8, 11])
         save = tmp_path / "season.png"
@@ -90,7 +90,7 @@ class TestPlotMapsAutoDerive:
 
     def test_precomputed_group_col_used_directly(self, tmp_path):
         """When agg_by column already present, time_col is not needed."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _monthly_df(n_months=3)  # has 'month', no 'time'
         save = tmp_path / "precomputed.png"
         # time_col default is 'time', but 'time' absent — should NOT raise
@@ -100,7 +100,7 @@ class TestPlotMapsAutoDerive:
 
     def test_season_labels_correct(self):
         """Derived season values match meteorological convention."""
-        from h2gis.utils.plot import plot_maps, split_by_group
+        from h2mare.utils.plot import plot_maps, split_by_group
 
         month_to_season = {
             12: "winter", 1: "winter", 2: "winter",
@@ -130,7 +130,7 @@ class TestPlotMapsAutoDerive:
 
     def test_infers_bbox_from_data(self, tmp_path):
         """data_bbox=None infers extent from data without error."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _timed_df()
         save = tmp_path / "bbox_inferred.png"
         plot_maps(df, "sst", agg_by="month", time_col="time", data_bbox=None, save_path=save)
@@ -138,7 +138,7 @@ class TestPlotMapsAutoDerive:
 
     def test_explicit_bbox_used(self, tmp_path):
         """Explicit data_bbox overrides data-derived extent."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _timed_df()
         save = tmp_path / "bbox_explicit.png"
         plot_maps(
@@ -150,7 +150,7 @@ class TestPlotMapsAutoDerive:
 
     def test_explicit_vminmax_used(self, tmp_path):
         """Explicit vminmax overrides data-derived min/max."""
-        from h2gis.utils.plot import plot_maps
+        from h2mare.utils.plot import plot_maps
         df = _timed_df()
         save = tmp_path / "vminmax.png"
         plot_maps(

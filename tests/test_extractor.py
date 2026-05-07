@@ -7,7 +7,7 @@ import xarray as xr
 from datetime import datetime
 from pathlib import Path
 
-from h2gis.processing.extractor import Extractor, _save_completed_keys, _keys_path
+from h2mare.processing.extractor import Extractor, _save_completed_keys, _keys_path
 
 
 # ---------------------------------------------------------------------------

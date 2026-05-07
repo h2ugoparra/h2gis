@@ -44,7 +44,7 @@ ERA5 / CDS credentials are configured separately via the `cdsapi` client — see
 ## Verify installation
 
 ```bash
-uv run h2gis --help
+uv run h2mare --help
 ```
 
 Expected output lists the available commands: `run`, `compile`, `convert`.

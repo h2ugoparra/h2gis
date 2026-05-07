@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
-from h2gis.storage.coverage import get_store_coverage, split_time_range
-from h2gis.types import DateRange, TimeResolution
+from h2mare.storage.coverage import get_store_coverage, split_time_range
+from h2mare.types import DateRange, TimeResolution
 
 
 class TestSplitTimeRange:
@@ -53,7 +53,7 @@ class TestGetStoreCoverage:
     def test_returns_date_range_when_data_exists(self):
         mock_coverage = DateRange("2020-01-01", "2020-12-31")
         with patch(
-            "h2gis.storage.coverage.get_zarr_time_coverage",
+            "h2mare.storage.coverage.get_zarr_time_coverage",
             return_value=mock_coverage,
         ):
             result = get_store_coverage("sst")
@@ -62,14 +62,14 @@ class TestGetStoreCoverage:
 
     def test_returns_none_when_no_data(self):
         with patch(
-            "h2gis.storage.coverage.get_zarr_time_coverage", return_value=None
+            "h2mare.storage.coverage.get_zarr_time_coverage", return_value=None
         ):
             result = get_store_coverage("sst")
         assert result is None
 
     def test_returns_none_on_exception(self):
         with patch(
-            "h2gis.storage.coverage.get_zarr_time_coverage",
+            "h2mare.storage.coverage.get_zarr_time_coverage",
             side_effect=RuntimeError("store unavailable"),
         ):
             result = get_store_coverage("sst")
