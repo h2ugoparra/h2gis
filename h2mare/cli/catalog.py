@@ -20,7 +20,6 @@ from typing import Optional
 
 import pandas as pd
 import typer
-from loguru import logger
 
 from h2mare.config import settings
 
@@ -46,7 +45,7 @@ def _print_catalog(var_key: str, show_rows: bool) -> None:
     if cov and cov != "No data":
         typer.echo(f"  Coverage   : {cov.start.date()} → {cov.end.date()}")
     else:
-        typer.echo(f"  Coverage   : No data")
+        typer.echo("  Coverage   : No data")
 
     variables = summary.get("variables") or set()
     typer.echo(f"  Variables  : {', '.join(sorted(variables)) if variables else '—'}")

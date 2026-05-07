@@ -366,7 +366,6 @@ def compute_curl_and_ekman(
 def get_previous_dates_da(da: xr.DataArray):
     """Get previous 15-days for ekman lag calculation"""
     da_dt_ini = da.time.values[0]
-    da_dt_fin = da.time.values[-1]
 
     repo = ZarrCatalog("atm-accum-avg")
 

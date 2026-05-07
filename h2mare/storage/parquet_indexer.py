@@ -1,5 +1,5 @@
 """
- Parquet files handling and manipulation.
+Parquet files handling and manipulation.
 """
 
 from __future__ import annotations

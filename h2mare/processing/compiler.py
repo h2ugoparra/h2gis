@@ -1,5 +1,5 @@
 """
-Create h2ds zarr files 
+Create h2ds zarr files
 """
 
 from __future__ import annotations
@@ -148,15 +148,14 @@ class Compiler:
         chunks = split_time_range(requested_range, self.time_resolution)
 
         logger.info(
-            f"Split into {len(chunks)} chunk(s) " f"({self.time_resolution} intervals)"
+            f"Split into {len(chunks)} chunk(s) ({self.time_resolution} intervals)"
         )
 
         written_paths: list[Path] = []
 
         for i, chunk in enumerate(chunks, 1):
             logger.debug(
-                f"Chunk {i}/{len(chunks)}: "
-                f"{chunk.start.date()} -> {chunk.end.date()}"
+                f"Chunk {i}/{len(chunks)}: {chunk.start.date()} -> {chunk.end.date()}"
             )
 
             datasets = []
@@ -264,7 +263,11 @@ class Compiler:
 
     def _process_bathy(self):
         var_cfg = self.app_config.variables.get("bathy")
-        data_path = self.remote_store_root / var_cfg.local_folder / "etopo_0.25deg_80W-10E-0-70N_mean-std_surface.nc"  # type: ignore
+        data_path = (
+            self.remote_store_root
+            / var_cfg.local_folder
+            / "etopo_0.25deg_80W-10E-0-70N_mean-std_surface.nc"
+        )  # type: ignore
         ds = xr.open_dataset(data_path).sel(
             lon=slice(self.bbox.xmin, self.bbox.xmax),
             lat=slice(self.bbox.ymin, self.bbox.ymax),
@@ -360,7 +363,6 @@ class Compiler:
 
 
 if __name__ == "__main__":
-
     log_path = settings.LOGS_DIR / f"{Path(__file__).stem}.log"
     logger.add(log_path, level="INFO")
 

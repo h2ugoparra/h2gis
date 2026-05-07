@@ -11,13 +11,11 @@ import pandas as pd
 from loguru import logger
 from tqdm import tqdm
 
-from h2mare.config import AppConfig, settings
+from h2mare.config import AppConfig
 from h2mare.downloader.base import BaseDownloader
 from h2mare.downloader.commons import resolve_date_range
 from h2mare.types import DateLike, DateRange
 from h2mare.utils.datetime_utils import normalize_date
-from h2mare.utils.paths import resolve_store_path
-from h2mare.validators import validate_var_key
 
 warnings.filterwarnings("ignore")
 

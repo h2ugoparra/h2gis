@@ -1,7 +1,6 @@
 """Function to process downloaded datasets from CMEMS"""
 
 import xarray as xr
-from loguru import logger
 
 from h2mare.processing.core.fronts import FrontProcessor
 from h2mare.storage.xarray_helpers import ds_float64_to_float32

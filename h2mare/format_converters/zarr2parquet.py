@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import gc
 from pathlib import Path
-from typing import Literal
 
 import pandas as pd
 import polars as pl

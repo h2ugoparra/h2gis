@@ -411,7 +411,9 @@ class ZarrCatalog:
                 else:
                     # Detect files added to disk since the catalog was last written
                     disk_files = {p.name for p in self.store_root.glob("*.zarr")}
-                    catalog_files = {Path(p).name for p in self._df_cache["path"].unique()}
+                    catalog_files = {
+                        Path(p).name for p in self._df_cache["path"].unique()
+                    }
                     if disk_files != catalog_files:
                         logger.debug(
                             f"[{self.var_key}] Catalog is stale "
@@ -531,9 +533,6 @@ class ZarrCatalog:
         if not date_list:
             return {}
 
-        # Get catalog
-        df = self.df
-
         result: dict[str, list[pd.Timestamp]] = defaultdict(list)
 
         date_list = [date_list] if isinstance(date_list, pd.Timestamp) else date_list
@@ -571,7 +570,9 @@ class ZarrCatalog:
         # Find overlapping files
         matches = self._find_overlapping_files(start, end)
         if matches.empty:
-            logger.warning(f"[{self.var_key}] No zarr files overlap range {start.date()} to {end.date()}")
+            logger.warning(
+                f"[{self.var_key}] No zarr files overlap range {start.date()} to {end.date()}"
+            )
             return []
 
         # Sort by start date and return unique paths (a file with rep+nrt rows

@@ -35,7 +35,7 @@ def split_time_range(date_range: DateRange, split: TimeResolution) -> list[DateR
             # End of current year
             chunk_end = pd.Timestamp(year=current.year, month=12, day=31)
         else:
-            raise ValueError(f"Invalid split value. Options are: 'month' or 'year'")
+            raise ValueError("Invalid split value. Options are: 'month' or 'year'")
 
         # Don't exceed requested end
         chunk_end = min(chunk_end, date_range.end)

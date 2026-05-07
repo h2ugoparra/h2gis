@@ -30,8 +30,7 @@ def validate_var_key(var_key: str, config: AppConfig) -> str:
     if var_key not in config.variables:
         available = ", ".join(config.variables.keys())
         raise ValueError(
-            f"Variable key '{var_key}' not found in config. "
-            f"Available keys: {available}"
+            f"Variable key '{var_key}' not found in config. Available keys: {available}"
         )
     return var_key
 

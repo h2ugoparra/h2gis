@@ -1,4 +1,4 @@
-"""Shared functions for downloaders. Except for CDSDownloader because of latest day for download. 
+"""Shared functions for downloaders. Except for CDSDownloader because of latest day for download.
 See .cds_downloader for details.
 """
 

@@ -98,7 +98,7 @@ def run(
 ) -> None:
     """Download and convert climate/ocean data for one or more variable keys."""
 
-    log_path = settings.LOGS_DIR / f"h2mare.log"
+    log_path = settings.LOGS_DIR / "h2mare.log"
     logger.add(log_path, level="INFO")
     logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
 

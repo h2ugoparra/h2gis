@@ -8,20 +8,18 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import cdsapi
 import pandas as pd
 from loguru import logger
 
-from h2mare.config import AppConfig, settings
+from h2mare.config import AppConfig
 from h2mare.downloader.base import BaseDownloader
 from h2mare.storage import get_store_coverage, split_time_range
 from h2mare.types import BBox, DateLike, DateRange, TimeResolution
 from h2mare.utils.datetime_utils import normalize_date
 from h2mare.utils.labels import create_filename_label
-from h2mare.utils.paths import resolve_store_path
-from h2mare.validators import validate_var_key
 
 warnings.filterwarnings("ignore")
 

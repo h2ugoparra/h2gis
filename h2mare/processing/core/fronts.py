@@ -1,6 +1,6 @@
 """
-Detection of oceanic fronts using the Belkin O'Reilly algorithm, applied to sea surface temperature (SST) and chlorophyll (CHL) data. 
-This module includes functions for identifying frontal pixels and calculating distances to the nearest front for each grid cell in a given dataset. 
+Detection of oceanic fronts using the Belkin O'Reilly algorithm, applied to sea surface temperature (SST) and chlorophyll (CHL) data.
+This module includes functions for identifying frontal pixels and calculating distances to the nearest front for each grid cell in a given dataset.
 The main class, `FrontProcessor`, orchestrates the processing of xarray Datasets, allowing for parallel computation across multiple time steps.
 """
 
@@ -230,7 +230,7 @@ class FrontProcessor:
             results = pool.starmap(self._process_daily, tasks)
             out.extend([r for r in results if r is not None])
 
-        logger.success(f"Completed")
+        logger.success("Completed")
         result = xr.combine_by_coords(out)
 
         if result is not None:

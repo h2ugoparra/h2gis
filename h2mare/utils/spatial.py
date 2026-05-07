@@ -2,7 +2,7 @@
 Functions for geographic distance calculations, Grid creation and land cover cliping
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import numpy as np
 import xarray as xr

@@ -322,13 +322,13 @@ class Extractor:
                 data = data.set_index(_AUTO_INDEX_SENTINEL)
             else:
                 logger.info(
-                    f"No index column name provided. Creating sequential '__row_id__' indexation."
+                    "No index column name provided. Creating sequential '__row_id__' indexation."
                 )
                 data = data.reset_index(drop=True)
             data.index.name = _AUTO_INDEX_SENTINEL
         else:
             if self.index_col not in data.columns:
-                raise ValueError(f"Index column name not found in data attributes.")
+                raise ValueError("Index column name not found in data attributes.")
             data = data.set_index(self.index_col)
         return data
 
@@ -434,7 +434,7 @@ class Extractor:
             data["time"] = pd.to_datetime(data["time"])
             return pd.DatetimeIndex(data["time"]).drop_duplicates()
         else:
-            raise ValueError(f"Time column 'time' not found in shapefile attributes.")
+            raise ValueError("Time column 'time' not found in shapefile attributes.")
 
     # ===================  PROCESS DATA ===================
 
@@ -562,7 +562,6 @@ class Extractor:
         all_succeeded = True
 
         for var_key, vars_ in var_dict.items():
-
             if var_key == "h2ds":
                 continue
 
@@ -699,7 +698,6 @@ class Extractor:
             ds, data["lon"].to_numpy(), data["lat"].to_numpy()
         )
 
-        import numpy as np
 
         isel_kwargs: dict = {
             "lon": xr.DataArray(lon_idx, dims=index_col, coords=coords),
@@ -781,9 +779,7 @@ class Extractor:
 
         bounds = self._define_bbox(data)
         logger.info(
-            f"Extracting {vkey.upper()} data | "
-            f"{self.data.shape[0]} rows | "
-            f"{bounds}"
+            f"Extracting {vkey.upper()} data | {self.data.shape[0]} rows | {bounds}"
         )
 
         ds = xr.open_dataset(data_path)
@@ -875,7 +871,7 @@ class Extractor:
         """
         bounds = self._define_bbox(data)
 
-        logger.info(f"Extracting 'MOON' data | " f"{data.shape[0]} rows | " f"{bounds}")
+        logger.info(f"Extracting 'MOON' data | {data.shape[0]} rows | {bounds}")
 
         lat = (bounds.ymin + bounds.ymax) / 2
         lon = (bounds.xmin + bounds.xmax) / 2

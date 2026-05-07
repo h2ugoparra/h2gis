@@ -29,9 +29,10 @@ uv run h2mare convert -v sst -v ssh
 uv run pytest tests/
 uv run pytest tests/test_types.py          # run a single test file
 
-# Format
-uv run black h2mare/
-uv run isort h2mare/
+# Format / lint
+uv run ruff format h2mare/
+uv run ruff check h2mare/
+uv run ruff check --fix h2mare/
 
 # Add / remove dependencies
 uv add <package>

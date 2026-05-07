@@ -118,11 +118,12 @@ def parquet2csv(
 
 
 if __name__ == "__main__":
-
     log_path = settings.LOGS_DIR / f"{Path(__file__).stem}.log"
     logger.add(log_path, level="INFO")
 
-    parquet_dir = settings.PARQUET_DIR / "h2mare_compiled-data-0.25deg-P1D_80W-10E-0-70N"
+    parquet_dir = (
+        settings.PARQUET_DIR / "h2mare_compiled-data-0.25deg-P1D_80W-10E-0-70N"
+    )
     dt_ini, dt_fin = "2023-01-01", "2023-12-31"
     parquet2csv(parquet_dir, settings.EXTERNAL_DIR, dt_ini, dt_fin)
 

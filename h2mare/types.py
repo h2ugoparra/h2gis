@@ -247,7 +247,7 @@ class BBox:
 
         if lon_name not in ds.coords or lat_name not in ds.coords:
             raise ValueError(
-                f"Dataset missing coordinates. " f"Available: {list(ds.coords.keys())}"
+                f"Dataset missing coordinates. Available: {list(ds.coords.keys())}"
             )
 
         lon = ds[lon_name]

@@ -67,18 +67,24 @@ constraint-dependencies = ["sparse==0.14.0"]
 
 [dependency-groups]
 dev = [
-    "black>=26.3.1",
     "ipykernel>=7.2.0",
-    "isort>=8.0.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "ruff>=0.9.0",
     "tox>=4.30.3",
     "tox-uv>=1.28.1",
 ]
 
-[tool.isort]
-profile = "black"
-skip_glob = ["*.ipynb"]
+[tool.ruff]
+line-length = 88
+exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.tox]
 legacy_tox_ini = """

@@ -466,7 +466,7 @@ class CMEMSDownloader(BaseDownloader):
                 chunks = split_time_range(task.date_range, time_split)
 
                 logger.info(
-                    f"Split into {len(chunks)} chunk(s) " f"({time_split} intervals)"
+                    f"Split into {len(chunks)} chunk(s) ({time_split} intervals)"
                 )
 
                 for i, chunk in enumerate(chunks, 1):
