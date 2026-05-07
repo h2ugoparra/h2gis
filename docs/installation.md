@@ -7,11 +7,19 @@
 - Sufficient disk space for downloaded datasets (varies by region and time range)
 - API credentials for the data providers you intend to use
 
+## Install from PyPI
+
+```bash
+pip install h2mare
+# or
+uv add h2mare
+```
+
 ## Install from source
 
 ```bash
 git clone https://github.com/h2ugoparra/h2mare.git
-cd h2gis
+cd h2mare
 uv sync
 ```
 
@@ -21,9 +29,29 @@ Include development dependencies (pytest, black, isort):
 uv sync --dev
 ```
 
-## Environment setup
+## Verify installation
 
-Create a `.env` file in the project root. At minimum `STORE_DIR` is required:
+```bash
+h2mare --help
+```
+
+Expected output lists the available commands: `run`, `compile`, `convert`.
+
+## First-time setup
+
+H2MARE requires two files in your working directory before running any command.
+
+### `config.yaml`
+
+Defines variables, dataset IDs, bounding boxes, and processing parameters. Download the [template from the repository](https://github.com/h2ugoparra/h2mare/blob/main/config.yaml) and edit it to match your setup:
+
+```bash
+curl -O https://raw.githubusercontent.com/h2ugoparra/h2mare/main/config.yaml
+```
+
+### `.env`
+
+Create a `.env` file. At minimum `STORE_DIR` is required:
 
 ```env
 # Path to external or large-capacity storage for processed Zarr files
@@ -41,13 +69,7 @@ AVISO_FTP_SERVER=ftp-access.aviso.altimetry.fr
 
 ERA5 / CDS credentials are configured separately via the `cdsapi` client — see the [CDS documentation](https://cds.climate.copernicus.eu/how-to-api) for setup.
 
-## Verify installation
-
-```bash
-uv run h2mare --help
-```
-
-Expected output lists the available commands: `run`, `compile`, `convert`.
+> **Tip:** Set the `H2MARE_ROOT` environment variable to point to a directory containing your `config.yaml` and `.env` if you want to run `h2mare` from a different location.
 
 ## Data storage layout
 

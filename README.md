@@ -1,6 +1,7 @@
 # H2MARE - Geospatial Processing for Climate and Ocean Data
 
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
+[![PyPI](https://img.shields.io/pypi/v/h2mare)](https://pypi.org/project/h2mare/)
 
 A Python pipeline for downloading and preprocessing multi-source oceanographic and atmospheric data into analysis-ready formats. H2MARE streamlines the acquisition and harmonization of data from major climate and ocean observation services, optimized for large-scale spatiotemporal analysis.
 
@@ -27,31 +28,53 @@ H2MARE supports the following data providers API keys and authentication are req
 
 ### Prerequisites
 
-- Python >= 3.9
+- Python >= 3.11
 - [uv](https://docs.astral.sh/uv/) — fast Python package and project manager
 - Sufficient disk space for downloaded datasets (varies by region and time range)
+
+### Install from PyPI
+
+```bash
+pip install h2mare
+# or
+uv add h2mare
+```
 
 ### Install from source
 
 ```bash
 git clone https://github.com/h2ugoparra/h2mare.git
 cd h2mare
-uv sync          # installs all dependencies into .venv
-```
-
-For development (includes pytest, black, isort):
-
-```bash
-uv sync --extra dev
+uv sync
 ```
 
 ## Configuration
 
-Create .env file with external storage path:
+H2MARE requires two configuration files in your working directory before first use.
+
+### 1. `config.yaml`
+
+Defines variables, dataset IDs, bounding boxes, and processing parameters. Copy the [template from the repository](https://github.com/h2ugoparra/h2mare/blob/main/config.yaml) as a starting point and edit it to match your needs.
+
+### 2. `.env`
 
 ```env
+# Path to external or large-capacity storage for processed Zarr files
 STORE_DIR=/path/to/your/storage
+
+# CMEMS credentials (required for SST, SSH, MLD, CHL, O2, SEAPODYM)
+CMEMS_USERNAME=your_username
+CMEMS_PASSWORD=your_password
+
+# AVISO credentials (required for FSLE, Eddies)
+AVISO_USERNAME=your_username
+AVISO_PASSWORD=your_password
+AVISO_FTP_SERVER=ftp-access.aviso.altimetry.fr
 ```
+
+ERA5 / CDS credentials are configured separately via the `cdsapi` client — see the [CDS documentation](https://cds.climate.copernicus.eu/how-to-api) for setup.
+
+> **Note:** Both files must be present in the directory where you run `h2mare`. You can also set the `H2MARE_ROOT` environment variable to point to a different directory containing them.
 
 ### Key variables groups
 

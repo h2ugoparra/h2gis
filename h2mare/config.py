@@ -69,7 +69,7 @@ class Settings:
         3. Walk up from __file__ — works for editable installs (source in place).
         4. Fallback: cwd() itself.
         """
-        if root_env := os.getenv("H2GIS_ROOT"):
+        if root_env := os.getenv("H2MARE_ROOT"):
             return Path(root_env).resolve()
 
         markers = {"config.yaml", "pyproject.toml", ".git"}
