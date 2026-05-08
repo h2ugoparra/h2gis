@@ -68,6 +68,7 @@ constraint-dependencies = ["sparse==0.14.0"]
 [dependency-groups]
 dev = [
     "ipykernel>=7.2.0",
+    "nbformat>=5.10.4",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "ruff>=0.9.0",

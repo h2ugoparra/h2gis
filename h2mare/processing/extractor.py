@@ -424,6 +424,19 @@ class Extractor:
         start_date = pd.to_datetime(max(start, start_store))
         end_date = pd.to_datetime(min(end, end_store))
 
+        if start < start_store:
+            clipped = dates[dates < start_store]
+            logger.warning(
+                f"{catalog.var_key}: {len(clipped)} date(s) before store coverage clipped "
+                f"({clipped.min().date()} -> {clipped.max().date()} | store starts {start_store.date()})"
+            )
+        if end > end_store:
+            clipped = dates[dates > end_store]
+            logger.warning(
+                f"{catalog.var_key}: {len(clipped)} date(s) after store coverage clipped "
+                f"({clipped.min().date()} -> {clipped.max().date()} | store ends {end_store.date()})"
+            )
+
         return sorted(dates[(dates >= start_date) & (dates <= end_date)])
 
     def _extract_unique_dates(
@@ -692,12 +705,12 @@ class Extractor:
         Returns:
             pd.DataFrame: extracted variables with previous index set
         """
-        coords = {index_col: data.index}
+        valid = data[data["lon"].notna() & data["lat"].notna()]
+        coords = {index_col: valid.index}
 
         lat_idx, lon_idx = Extractor._nearest_grid_indices(
-            ds, data["lon"].to_numpy(), data["lat"].to_numpy()
+            ds, valid["lon"].to_numpy(), valid["lat"].to_numpy()
         )
-
 
         isel_kwargs: dict = {
             "lon": xr.DataArray(lon_idx, dims=index_col, coords=coords),
@@ -705,11 +718,12 @@ class Extractor:
         }
 
         if "time" in ds.coords:
-            time_idx = Extractor._nearest_time_indices(ds, data["time"].values)  # type: ignore
+            time_idx = Extractor._nearest_time_indices(ds, valid["time"].values)  # type: ignore
             isel_kwargs["time"] = xr.DataArray(time_idx, dims=index_col, coords=coords)
 
         ds = load_dataset_to_memory(ds.isel(**isel_kwargs))
-        return ds.to_dataframe()
+        result = ds.to_dataframe()
+        return result.reindex(data.index)
 
     @staticmethod
     def extract_from_shp(
