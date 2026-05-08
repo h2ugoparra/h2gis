@@ -9,7 +9,7 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, overload
 
 import ephem
 import geopandas as gpd
@@ -523,6 +523,22 @@ class Extractor:
             return self.extract_from_csv(data_resolved, ds, self.index_col)
 
         raise ValueError(f"Unsupported input_type: {self.input_type}")
+
+    @overload
+    def run(
+        self,
+        var_dict: Optional[Union[str, list[str], dict[str, str | list[str] | None]]] = ...,
+        output_path: None = ...,
+        n_workers: int = ...,
+    ) -> pd.DataFrame: ...
+
+    @overload
+    def run(
+        self,
+        var_dict: Optional[Union[str, list[str], dict[str, str | list[str] | None]]] = ...,
+        output_path: str | Path = ...,
+        n_workers: int = ...,
+    ) -> None: ...
 
     @log_time
     def run(
