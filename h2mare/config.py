@@ -20,8 +20,8 @@ class Settings:
 
     def __init__(self):
 
-        # project root: where pyproject.toml lives
-        self.BASE_DIR = self._find_project_root()
+        # project root: directory containing h2mare's config.yaml
+        self.BASE_DIR, self._project_mode = self._find_project_root()
 
         # Load .env file
         self._load_dotenv()
@@ -52,35 +52,41 @@ class Settings:
         # External Storage (where all data lives)
         self.STORE_DIR = self._get_store_dir()
 
-        # Create dirs if first time running
-        self.ensure_directories()
+        # Only create directories when running inside an h2mare project (config.yaml found).
+        # When h2mare is used as a library dependency, skip directory creation so we don't
+        # pollute the consuming project with data/ and logs/ folders.
+        if self._project_mode:
+            self.ensure_directories()
 
         # Application config (lazy loaded)
         self._app_config: Optional[AppConfig] = None
         self._global_attrs = None
         self._variable_attrs = None
 
-    def _find_project_root(self) -> Path:
-        """Find project root by looking for config.yaml, pyproject.toml, or .git.
+    def _find_project_root(self) -> tuple[Path, bool]:
+        """Find the h2mare project root and whether we are in project mode.
+
+        Returns (root_path, is_project_mode). is_project_mode is True only when
+        an h2mare config.yaml is found, meaning h2mare is being run as a project
+        rather than used as a library dependency inside another project.
 
         Search order:
-        1. H2GIS_ROOT env var (explicit override).
-        2. Walk up from cwd() — works when running from the project directory.
-        3. Walk up from __file__ — works for editable installs (source in place).
-        4. Fallback: cwd() itself.
+        1. H2MARE_ROOT env var (explicit override) → project mode.
+        2. Walk up from cwd() looking for config.yaml only.
+        3. Walk up from __file__ looking for config.yaml only (editable installs).
+        4. Fallback: ~/.h2mare → library mode, no directories created.
         """
         if root_env := os.getenv("H2MARE_ROOT"):
-            return Path(root_env).resolve()
+            return Path(root_env).resolve(), True
 
-        markers = {"config.yaml", "pyproject.toml", ".git"}
-        for start in (Path(__file__).resolve().parent, Path.cwd()):
+        for start in (Path.cwd(), Path(__file__).resolve().parent):
             current = start.resolve()
             while current != current.parent:
-                if any((current / m).exists() for m in markers):
-                    return current
+                if (current / "config.yaml").exists():
+                    return current, True
                 current = current.parent
 
-        return Path.cwd()
+        return Path.home() / ".h2mare", False
 
     def _load_dotenv(self):
         """Load environment variables from .env file."""
