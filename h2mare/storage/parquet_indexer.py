@@ -410,6 +410,16 @@ class ParquetIndexer:
 
         self._update_physical_schema(df)
 
+        # Recompute after schema update so new columns are included in exclude_cols
+        # below. Without this, new cols present in partially-written partitions (e.g.
+        # from an interrupted prior run) would appear in both the existing CTE and
+        # df_new, producing duplicate column names in the DuckDB join.
+        duplicated_cols = self.physical_cols.intersection(n_cols) - {
+            self.time_col,
+            self.lat_col,
+            self.lon_col,
+        }
+
         affected = df.select(["year", "month"]).unique().rows()
 
         # Separate partitions that already exist from genuinely new ones
