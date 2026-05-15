@@ -8,21 +8,19 @@ A Python pipeline for downloading and preprocessing multi-source oceanographic a
 ## Features
 
 - **Multi-source data integration**: Download and process data from CMEMS, AVISO, and ERA5.
-- **Variable grouping**: Organize related variables using configurable keys.
-- **Format conversion**: Automated conversion from NetCDF/GRIB to optimized Zarr and Parquet format
-- **Data compilation**: Regrid and interpolate multi-resolution datasets to a common grid
-- **Point and geometry extraction**: Extract time series for specific locations or spatial features
+- **Format conversion**: Automated conversion from NetCDF/GRIB to optimized Zarr and Parquet formats.
+- **Data compilation**: Regrid and interpolate multi-resolution datasets to a common grid.
+- **Point and geometry extraction**: Extract time series for specific locations or spatial features.
 
 ## Data Sources
 
-H2MARE supports the following data providers API keys and authentication are required for each:
+H2MARE supports the following data providers. API keys and authentication are required for each.
 
-- **[CMEMS](https://marine.copernicus.eu/)** - Copernicus Marine Service: Satellite and in-situ ocean observations
-- **[AVISO](https://www.aviso.altimetry.fr/en/home.html)** - Archiving, Validation and Interpretation of Satellite Oceanographic data
-- **[CDS-ERA5](https://cds.climate.copernicus.eu/)** - ERA5 hourly atmospheric reanalysis (1940-present)  
-  *Hersbach, H., et al. (2023). DOI: 10.24381/cds.adbb2d47*
+- **[CMEMS](https://marine.copernicus.eu/)** — Copernicus Marine Service: satellite and in-situ ocean observations
+- **[AVISO](https://www.aviso.altimetry.fr/en/home.html)** — Archiving, Validation and Interpretation of Satellite Oceanographic data
+- **[CDS-ERA5](https://cds.climate.copernicus.eu/)** — ERA5 hourly atmospheric reanalysis (1940–present)
 
-**Note**: Refer to each provider's documentation for authentication setup before use.
+Refer to each provider's documentation for authentication setup before use.
 
 ## Installation
 
@@ -30,7 +28,6 @@ H2MARE supports the following data providers API keys and authentication are req
 
 - Python >= 3.11
 - [uv](https://docs.astral.sh/uv/) — fast Python package and project manager
-- Sufficient disk space for downloaded datasets (varies by region and time range)
 
 ### Install from PyPI
 
@@ -62,47 +59,33 @@ Defines variables, dataset IDs, bounding boxes, and processing parameters. Copy 
 # Path to external or large-capacity storage for processed Zarr files
 STORE_ROOT=/path/to/your/storage
 
-# CMEMS credentials (required for SST, SSH, MLD, CHL, O2, SEAPODYM)
-CMEMS_USERNAME=your_username
-CMEMS_PASSWORD=your_password
-
 # AVISO credentials (required for FSLE, Eddies)
 AVISO_USERNAME=your_username
 AVISO_PASSWORD=your_password
 AVISO_FTP_SERVER=ftp-access.aviso.altimetry.fr
 ```
 
-ERA5 / CDS credentials are configured separately via the `cdsapi` client — see the [CDS documentation](https://cds.climate.copernicus.eu/how-to-api) for setup.
+CMEMS credentials are configured via the `copernicusmarine` client. ERA5 / CDS credentials are configured via the `cdsapi` client. See the [CDS documentation](https://cds.climate.copernicus.eu/how-to-api) for setup.
 
 > **Note:** Both files must be present in the directory where you run `h2mare`. You can also set the `H2MARE_ROOT` environment variable to point to a different directory containing them.
-
-### Key variables groups
-
-Edit `config.yaml` to define variable groups and processing parameters.
-
-### Data Flow
-
-- **Dowload** -  Raw NetCDF/GRIB files are fetched from configurated sources and saved at specified time resolution (monthly or yearly) as native-resolution Zarr files.
-- **Compilation** (`h2mare/processing/compiler.py`) - Preprocessed data is regridded to a defined spatial/temporal resolution and geographic extent (configured via 'h2ds' key in `config.yaml`)
-- **Extraction** (`h2mare/processing/extractor.py`) - Point (CSV files) or geometry (SHP files) data extraction from xarray datasets.
 
 ## Quick Start
 
 ```bash
 # Download and process a single variable for a specific date range
-uv run h2mare run sst --start-date 2021-01-01 --end-date 2021-12-31
+uv run h2mare run -v sst --start-date 2021-01-01 --end-date 2021-12-31
 
-# Multiple variables at once (space-separated)
-uv run h2mare run seapodym mld o2 chl
+# Multiple variables at once
+uv run h2mare run -v seapodym -v mld -v o2 -v chl
 
 # Infer missing dates from the existing store and download what's new
-uv run h2mare run sst
+uv run h2mare run -v sst
 
 # Download only (skip Zarr conversion)
-uv run h2mare run sst --no-process
+uv run h2mare run -v sst --no-convert
 
 # Validate configuration without downloading
-uv run h2mare run sst --dry-run
+uv run h2mare run -v sst --dry-run
 
 # Process all configured variables
 uv run h2mare run
@@ -117,9 +100,9 @@ uv run pytest tests/
 # Run a single test file
 uv run pytest tests/test_zarr_catalog.py -v
 
-# Format code
-uv run black h2mare/
-uv run isort h2mare/
+# Lint and format
+uv run ruff check h2mare/
+uv run ruff format h2mare/
 ```
 
 ## Built with
@@ -129,8 +112,10 @@ uv run isort h2mare/
 | [xarray](https://xarray.dev/) | N-dimensional labelled arrays and NetCDF/Zarr I/O |
 | [zarr](https://zarr.dev/) | Chunked, compressed array storage |
 | [dask](https://www.dask.org/) | Parallel and out-of-core computation |
-| [polars](https://pola.rs/) | Fast DataFrame engine for extracted time series |
+| [polars](https://pola.rs/) | Fast DataFrame engine for Parquet I/O |
+| [duckdb](https://duckdb.org/) | In-process SQL for Parquet overlap resolution and scanning |
 | [geopandas](https://geopandas.org/) | Geometry-based spatial extraction |
+| [plotly](https://plotly.com/python/) | Interactive time-series and spatial visualizations |
 | [copernicusmarine](https://pypi.org/project/copernicusmarine/) | CMEMS dataset access |
 | [cdsapi](https://pypi.org/project/cdsapi/) | ERA5 / CDS dataset access |
 
@@ -141,10 +126,6 @@ Contributions are welcome! Please feel free to submit issues or pull requests on
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## AI Assistance
-
-Parts of this codebase were developed with the help of [Claude](https://claude.ai) (Anthropic).
 
 ## Acknowledgments
 
