@@ -96,7 +96,10 @@ class Compiler:
         self.local_store_root = (
             local_store_root or settings.ZARR_DIR / self.var_config.local_folder
         )
-        self.remote_store_root = remote_store_root or settings.STORE_ROOT
+        resolved_remote = remote_store_root or settings.STORE_ROOT
+        if resolved_remote is None:
+            raise ValueError("remote_store_root must be provided or STORE_ROOT must be set in the environment")
+        self.remote_store_root: Path = resolved_remote
 
         if self.var_config.bbox is not None:
             self.bbox = BBox.from_tuple(self.var_config.bbox)
@@ -262,12 +265,10 @@ class Compiler:
         return ds.interp_like(self.base_grid, method="linear", assume_sorted=True)
 
     def _process_bathy(self):
-        var_cfg = self.app_config.variables.get("bathy")
-        data_path = (
-            self.remote_store_root
-            / var_cfg.local_folder
-            / "etopo_0.25deg_80W-10E-0-70N_mean-std_surface.nc"
-        )  # type: ignore
+        var_cfg = self.app_config.variables["bathy"]
+        if var_cfg.data_file is None:
+            raise ValueError("bathy config entry is missing required 'data_file' field")
+        data_path = self.remote_store_root / var_cfg.local_folder / var_cfg.data_file
         ds = xr.open_dataset(data_path).sel(
             lon=slice(self.bbox.xmin, self.bbox.xmax),
             lat=slice(self.bbox.ymin, self.bbox.ymax),
@@ -300,7 +301,7 @@ class Compiler:
 
     def _process_o2(
         self, catalog: ZarrCatalog, date_range: DateRange, depths: list[float]
-    ) -> xr.Dataset:
+    ) -> xr.Dataset | None:
         """
         Create Dissolved oxygen variables for specified depth intervals
         """

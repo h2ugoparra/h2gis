@@ -409,7 +409,8 @@ class Extractor:
         if store_dates is None or store_bbox is None:
             raise ValueError(f"No coverage data for {catalog.var_key}")
 
-        start_store, end_store = store_dates.start, store_dates.end
+        start_store = pd.Timestamp(store_dates.start)
+        end_store = pd.Timestamp(store_dates.end)
 
         # Input Data coverage
         dates = self._extract_unique_dates(self.data)
@@ -800,12 +801,17 @@ class Extractor:
         and points (csv - from coarser 0.25deg res with mean and std already calculated).
         """
         vkey = "bathy"
-        store_root = resolve_store_path(self.app_config.variables[vkey])
+        var_cfg = self.app_config.variables[vkey]
+        store_root = resolve_store_path(var_cfg)
 
         if self.input_type == "shp":
-            data_path = store_root / "etopo_15s_80W-10E-0-70N_surface.nc"
+            if var_cfg.data_file_hires is None:
+                raise ValueError("bathy config entry is missing required 'data_file_hires' field")
+            data_path = store_root / var_cfg.data_file_hires
         elif self.input_type == "csv":
-            data_path = store_root / "etopo_0.25deg_80W-10E-0-70N_mean-std_surface.nc"
+            if var_cfg.data_file is None:
+                raise ValueError("bathy config entry is missing required 'data_file' field")
+            data_path = store_root / var_cfg.data_file
 
         bounds = self._define_bbox(data)
         logger.info(

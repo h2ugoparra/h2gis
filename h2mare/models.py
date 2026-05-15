@@ -19,6 +19,8 @@ class KeyVarConfigEntry(msgspec.Struct):
     subset: Optional[bool] = True
     bbox: Optional[tuple[float, float, float, float]] = None
     depth_range: Optional[tuple[float, float]] = None
+    data_file: Optional[str] = None
+    data_file_hires: Optional[str] = None
 
     def __post_init__(self):
         if self.bbox is not None:

@@ -63,7 +63,7 @@ Variables with no data for a given chunk are skipped with a warning rather than 
 
 | Variable | Behaviour |
 |---|---|
-| `bathy` | Read from a static NetCDF file; interpolated onto the output grid |
+| `bathy` | Read from the static NetCDF file configured via `data_file` in `config.yaml`; interpolated onto the output grid |
 | `moon` | Lunar illumination computed from `ephem` for each day; broadcast to all grid cells |
 | `o2` | Depth-sliced at 0, 100, 500, and 1000 m before interpolation |
 | `atm-accum-avg` | `dayofyear`, `month`, `quantile` coordinates dropped before merge |
