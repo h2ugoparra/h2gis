@@ -1,0 +1,1522 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Geospatial processing pipeline for climate and ocean data">
+      
+      
+        <meta name="author" content="Hugo Parra">
+      
+      
+        <link rel="canonical" href="https://h2ugoparra.github.io/h2mare/variables/">
+      
+      
+        <link rel="prev" href="../cli/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Variables - h2mare</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#variable-catalog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="h2mare" class="md-header__button md-logo" aria-label="h2mare" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            h2mare
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Variables
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="cyan"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/h2ugoparra/h2mare" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    h2ugoparra/h2mare
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../configuration/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Configuration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../cli/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  CLI Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Variables
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="h2mare" class="md-nav__button md-logo" aria-label="h2mare" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    h2mare
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/h2ugoparra/h2mare" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    h2ugoparra/h2mare
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variables
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sst-sea-surface-temperature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sst — Sea Surface Temperature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssh-sea-surface-height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh — Sea Surface Height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mld-mixed-layer-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mld — Mixed Layer Depth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chl-chlorophyll-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chl — Chlorophyll-a
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seapodym-micronekton-seapodym" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        seapodym — Micronekton (SEAPODYM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#o2-dissolved-oxygen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        o2 — Dissolved Oxygen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fsle-finite-size-lyapunov-exponents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsle — Finite-Size Lyapunov Exponents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eddies-mesoscale-eddies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eddies — Mesoscale Eddies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atm-instante-instantaneous-atmospheric-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        atm-instante — Instantaneous Atmospheric Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atm-accum-avg-accumulated-averaged-atmospheric-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        atm-accum-avg — Accumulated / Averaged Atmospheric Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiation-surface-radiation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radiation — Surface Radiation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waves-ocean-waves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        waves — Ocean Waves
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#special-variables-compile-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Special variables (compile-only)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/downloader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Downloaders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/compiler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/zarr_catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ZarrCatalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/extractor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extractor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/parquet_indexer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ParquetIndexer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/parquet_plotter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ParquetPlotter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/parquet2csv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    parquet2csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sst-sea-surface-temperature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sst — Sea Surface Temperature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssh-sea-surface-height" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ssh — Sea Surface Height
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mld-mixed-layer-depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mld — Mixed Layer Depth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chl-chlorophyll-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chl — Chlorophyll-a
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seapodym-micronekton-seapodym" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        seapodym — Micronekton (SEAPODYM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#o2-dissolved-oxygen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        o2 — Dissolved Oxygen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fsle-finite-size-lyapunov-exponents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsle — Finite-Size Lyapunov Exponents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eddies-mesoscale-eddies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        eddies — Mesoscale Eddies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atm-instante-instantaneous-atmospheric-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        atm-instante — Instantaneous Atmospheric Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#atm-accum-avg-accumulated-averaged-atmospheric-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        atm-accum-avg — Accumulated / Averaged Atmospheric Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiation-surface-radiation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radiation — Surface Radiation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waves-ocean-waves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        waves — Ocean Waves
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#special-variables-compile-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Special variables (compile-only)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="variable-catalog">Variable Catalog<a class="headerlink" href="#variable-catalog" title="Permanent link">&para;</a></h1>
+<p>All variables configured in <code>config.yaml</code>. Each key maps to one data stream with its own downloader, Zarr store, and output variables.</p>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Source</th>
+<th>Provider</th>
+<th>NRT</th>
+<th>Output variables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sst</code></td>
+<td>CMEMS</td>
+<td>Satellite L4</td>
+<td>yes</td>
+<td><code>analysed_sst</code>, <code>analysis_error</code>, <code>sst_fdist</code></td>
+</tr>
+<tr>
+<td><code>ssh</code></td>
+<td>CMEMS</td>
+<td>Satellite L4</td>
+<td>yes</td>
+<td><code>adt</code>, <code>sla</code>, <code>ugos</code>, <code>vgos</code>, <code>gke</code></td>
+</tr>
+<tr>
+<td><code>mld</code></td>
+<td>CMEMS</td>
+<td>Model (NEMO)</td>
+<td>no</td>
+<td><code>mld</code></td>
+</tr>
+<tr>
+<td><code>chl</code></td>
+<td>CMEMS</td>
+<td>Satellite L4</td>
+<td>no</td>
+<td><code>chl</code>, <code>chl_fdist</code></td>
+</tr>
+<tr>
+<td><code>seapodym</code></td>
+<td>CMEMS</td>
+<td>Model (SEAPODYM)</td>
+<td>no</td>
+<td><code>mnkc_epi</code>, <code>mnkc_umeso</code>, <code>mnkc_mumeso</code>, <code>npp</code>, <code>zooc</code>, <code>zeu</code></td>
+</tr>
+<tr>
+<td><code>o2</code></td>
+<td>CMEMS</td>
+<td>Model (PISCES)</td>
+<td>no</td>
+<td><code>o2_0</code>, <code>o2_100</code>, <code>o2_500</code>, <code>o2_1000</code></td>
+</tr>
+<tr>
+<td><code>fsle</code></td>
+<td>AVISO</td>
+<td>FTP</td>
+<td>yes</td>
+<td><code>fsle_max</code></td>
+</tr>
+<tr>
+<td><code>eddies</code></td>
+<td>AVISO</td>
+<td>FTP</td>
+<td>yes</td>
+<td>eddy geometry and track fields</td>
+</tr>
+<tr>
+<td><code>atm-instante</code></td>
+<td>CDS / ERA5</td>
+<td>Reanalysis</td>
+<td>no</td>
+<td><code>msl</code>, <code>u10</code>, <code>v10</code>, <code>tcc</code>, <code>wind_mean</code>, <code>wind_max</code>, <code>wind_std</code></td>
+</tr>
+<tr>
+<td><code>atm-accum-avg</code></td>
+<td>CDS / ERA5</td>
+<td>Reanalysis</td>
+<td>no</td>
+<td><code>tp</code>, <code>avg_iews</code>, <code>avg_inss</code>, <code>ekman_pumping</code>, <code>ekman_anom</code>, …</td>
+</tr>
+<tr>
+<td><code>radiation</code></td>
+<td>CDS / ERA5</td>
+<td>Reanalysis</td>
+<td>no</td>
+<td><code>slhf</code>, <code>ssrd</code>, <code>tisr</code></td>
+</tr>
+<tr>
+<td><code>waves</code></td>
+<td>CDS / ERA5</td>
+<td>Reanalysis</td>
+<td>no</td>
+<td><code>swh</code>, <code>mdts</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="detailed-descriptions">Detailed descriptions<a class="headerlink" href="#detailed-descriptions" title="Permanent link">&para;</a></h2>
+<h3 id="sst-sea-surface-temperature"><code>sst</code> — Sea Surface Temperature<a class="headerlink" href="#sst-sea-surface-temperature" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>METOFFICE-GLO-SST-L4-REP-OBS-SST</code></li>
+<li><strong>Dataset (nrt):</strong> <code>METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2</code></li>
+<li><strong>Resolution:</strong> 0.05°, resampled to 0.25°</li>
+<li><strong>Variables:</strong> analysed SST (°C), analysis error (K), distance to nearest SST front (km)</li>
+</ul>
+<h3 id="ssh-sea-surface-height"><code>ssh</code> — Sea Surface Height<a class="headerlink" href="#ssh-sea-surface-height" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>cmems_obs-sl_glo_phy-ssh_my_allsat-l4-duacs-0.125deg_P1D</code></li>
+<li><strong>Dataset (nrt):</strong> <code>cmems_obs-sl_glo_phy-ssh_nrt_allsat-l4-duacs-0.125deg_P1D</code></li>
+<li><strong>Resolution:</strong> 0.125°, resampled to 0.25°</li>
+<li><strong>Variables:</strong> ADT (m), SLA (m), geostrophic velocities u/v (m s⁻¹), geostrophic kinetic energy (m² s⁻²)</li>
+</ul>
+<h3 id="mld-mixed-layer-depth"><code>mld</code> — Mixed Layer Depth<a class="headerlink" href="#mld-mixed-layer-depth" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>cmems_mod_glo_phy_my_0.083deg_P1D-m</code></li>
+<li><strong>Resolution:</strong> 0.083°, resampled to 0.25°</li>
+<li><strong>Variables:</strong> mixed layer depth (m) — depth where density increase corresponds to a 0.2 °C temperature decrease relative to 10 m</li>
+</ul>
+<h3 id="chl-chlorophyll-a"><code>chl</code> — Chlorophyll-a<a class="headerlink" href="#chl-chlorophyll-a" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D</code></li>
+<li><strong>Resolution:</strong> 4 km, resampled to 0.25°</li>
+<li><strong>Variables:</strong> CHL concentration (mg m⁻³), distance to nearest CHL front (km)</li>
+</ul>
+<h3 id="seapodym-micronekton-seapodym"><code>seapodym</code> — Micronekton (SEAPODYM)<a class="headerlink" href="#seapodym-micronekton-seapodym" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>cmems_mod_glo_bgc_my_0.083deg-lmtl_P1D-i</code></li>
+<li><strong>Variables:</strong> epipelagic, upper/migrant mesopelagic micronekton (g m⁻²); net primary productivity (mg m⁻² day⁻¹); zooplankton carbon (g m⁻²); euphotic depth (m)</li>
+</ul>
+<h3 id="o2-dissolved-oxygen"><code>o2</code> — Dissolved Oxygen<a class="headerlink" href="#o2-dissolved-oxygen" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dataset (rep):</strong> <code>cmems_mod_glo_bgc_my_0.25deg_P1D-m</code></li>
+<li><strong>Resolution:</strong> 0.25° (native)</li>
+<li><strong>Variables:</strong> O₂ concentration (mmol m⁻³) at 0, 100, 500, and 1000 m depth</li>
+</ul>
+<h3 id="fsle-finite-size-lyapunov-exponents"><code>fsle</code> — Finite-Size Lyapunov Exponents<a class="headerlink" href="#fsle-finite-size-lyapunov-exponents" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> AVISO FTP (delayed-time and NRT)</li>
+<li><strong>Variables:</strong> backward FSLE maximum eigenvalue (days⁻¹)</li>
+</ul>
+<h3 id="eddies-mesoscale-eddies"><code>eddies</code> — Mesoscale Eddies<a class="headerlink" href="#eddies-mesoscale-eddies" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> AVISO META3.2 eddy trajectory atlas</li>
+<li><strong>Variables:</strong> eddy center coordinates, track ID, effective and speed radii, amplitude, mean speed; distance and normalised distance to nearest cyclonic/anticyclonic eddy center</li>
+</ul>
+<h3 id="atm-instante-instantaneous-atmospheric-variables"><code>atm-instante</code> — Instantaneous Atmospheric Variables<a class="headerlink" href="#atm-instante-instantaneous-atmospheric-variables" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> ERA5 hourly single-level reanalysis (CDS)</li>
+<li><strong>Variables:</strong> mean sea level pressure (hPa), 10 m wind components u/v (m s⁻¹), total cloud cover, wind speed statistics (mean, max, std)</li>
+</ul>
+<h3 id="atm-accum-avg-accumulated-averaged-atmospheric-variables"><code>atm-accum-avg</code> — Accumulated / Averaged Atmospheric Variables<a class="headerlink" href="#atm-accum-avg-accumulated-averaged-atmospheric-variables" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> ERA5 hourly single-level reanalysis (CDS)</li>
+<li><strong>Variables:</strong> total precipitation (mm), surface wind stress components (N m⁻²), daily Ekman pumping velocity and anomaly (m s⁻¹), lagged Ekman anomalies (3, 7, 14 days), upwelling event counts (3, 7, 14-day windows)</li>
+</ul>
+<h3 id="radiation-surface-radiation"><code>radiation</code> — Surface Radiation<a class="headerlink" href="#radiation-surface-radiation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> ERA5 hourly single-level reanalysis (CDS)</li>
+<li><strong>Variables:</strong> surface latent heat flux (W m⁻²), surface solar radiation downwards (W m⁻²), TOA incident solar radiation (W m⁻²)</li>
+</ul>
+<h3 id="waves-ocean-waves"><code>waves</code> — Ocean Waves<a class="headerlink" href="#waves-ocean-waves" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> ERA5 hourly single-level reanalysis (CDS)</li>
+<li><strong>Variables:</strong> significant height of combined wind waves and swell (m), mean direction of total swell (degrees)</li>
+</ul>
+<hr />
+<h2 id="special-variables-compile-only">Special variables (compile-only)<a class="headerlink" href="#special-variables-compile-only" title="Permanent link">&para;</a></h2>
+<p>These keys are not downloaded — they are generated during the compile step.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bathy</code></td>
+<td>Ocean bathymetry from ETOPO 2022 v1 at 0.25°. Mean depth (m) and std per grid cell. Source files are configured via <code>data_file</code> (0.25° grid, used by compiler and CSV extraction) and <code>data_file_hires</code> (native resolution, used by SHP extraction) in <code>config.yaml</code>.</td>
+</tr>
+<tr>
+<td><code>moon</code></td>
+<td>Lunar illumination (%) computed from the <code>ephem</code> library. Same value broadcast across all grid cells per day.</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
