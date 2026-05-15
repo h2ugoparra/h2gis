@@ -528,7 +528,9 @@ class Extractor:
     @overload
     def run(
         self,
-        var_dict: Optional[Union[str, list[str], dict[str, str | list[str] | None]]] = ...,
+        var_dict: Optional[
+            Union[str, list[str], dict[str, str | list[str] | None]]
+        ] = ...,
         output_path: None = ...,
         n_workers: int = ...,
     ) -> pd.DataFrame: ...
@@ -536,7 +538,9 @@ class Extractor:
     @overload
     def run(
         self,
-        var_dict: Optional[Union[str, list[str], dict[str, str | list[str] | None]]] = ...,
+        var_dict: Optional[
+            Union[str, list[str], dict[str, str | list[str] | None]]
+        ] = ...,
         output_path: str | Path = ...,
         n_workers: int = ...,
     ) -> None: ...
@@ -806,11 +810,15 @@ class Extractor:
 
         if self.input_type == "shp":
             if var_cfg.data_file_hires is None:
-                raise ValueError("bathy config entry is missing required 'data_file_hires' field")
+                raise ValueError(
+                    "bathy config entry is missing required 'data_file_hires' field"
+                )
             data_path = store_root / var_cfg.data_file_hires
         elif self.input_type == "csv":
             if var_cfg.data_file is None:
-                raise ValueError("bathy config entry is missing required 'data_file' field")
+                raise ValueError(
+                    "bathy config entry is missing required 'data_file' field"
+                )
             data_path = store_root / var_cfg.data_file
 
         bounds = self._define_bbox(data)

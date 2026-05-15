@@ -74,4 +74,6 @@ def parquet2csv(
     with ThreadPoolExecutor(max_workers=n_workers) as executor:
         executor.map(write_group, date_keys)
 
-    logger.success(f"Finished exporting {len(date_keys)} {freq} CSV files to {csv_root}")
+    logger.success(
+        f"Finished exporting {len(date_keys)} {freq} CSV files to {csv_root}"
+    )

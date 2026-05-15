@@ -98,7 +98,9 @@ class Compiler:
         )
         resolved_remote = remote_store_root or settings.STORE_ROOT
         if resolved_remote is None:
-            raise ValueError("remote_store_root must be provided or STORE_ROOT must be set in the environment")
+            raise ValueError(
+                "remote_store_root must be provided or STORE_ROOT must be set in the environment"
+            )
         self.remote_store_root: Path = resolved_remote
 
         if self.var_config.bbox is not None:
