@@ -24,17 +24,14 @@ from h2mare.utils.datetime_utils import to_datetime
 
 from .parquet_helpers import polars_float64_to_float32
 
-# For parquet writing partition size adn schema
-TARGET_FILE_MB = 256
-EST_BYTES_PER_ROW = 200
-MAX_ROWS_PER_FILE = int((TARGET_FILE_MB * 1024**2) / EST_BYTES_PER_ROW)
+_TIME_COMPONENTS = {"year", "month", "day"}
 
-PARTITION_SCHEMA = pa.schema(
-    [
-        pa.field("year", pa.int32(), nullable=False),
-        pa.field("month", pa.int32(), nullable=False),
-    ]
-)
+
+def _coerce_partition_value(s: str) -> int | str:
+    try:
+        return int(s)
+    except ValueError:
+        return s
 
 
 class ParquetIndexer:
@@ -45,6 +42,8 @@ class ParquetIndexer:
         time_col: str = "time",
         lon_col: str = "lon",
         lat_col: str = "lat",
+        target_file_mb: int = 256,
+        partition_by: list[str] = ["year", "month"],
     ):
         """
         Parquet data indexer.
@@ -54,6 +53,10 @@ class ParquetIndexer:
             time_col (str, optional): Time column name. Defaults to "time".
             lon_col (str, optional): Longitude column name. Defaults to "lon".
             lat_col (str, optional): Latitude column name. Defaults to "lat".
+            target_file_mb (int, optional): Target size per Parquet file in MB. Defaults to 256.
+            partition_by (list[str], optional): Hive partition column names. Temporal components
+                ("year", "month", "day") are auto-derived from the time column; all other columns
+                must be present in the DataFrame passed to add_data(). Defaults to ["year", "month"].
 
         Raises:
             ValueError: If time, lat, lon cols not in data.
@@ -62,10 +65,11 @@ class ParquetIndexer:
         self.time_col = time_col
         self.lon_col = lon_col
         self.lat_col = lat_col
+        self._target_file_mb = target_file_mb
+        self._partition_by = list(partition_by)
 
-        # Set pyarrow partitioning schema and cols name. This avoids adding them to physical schema
-        self.partition_schema = PARTITION_SCHEMA
-        self.partition_cols = set(self.partition_schema.names)
+        # partition_cols excludes these from the physical schema
+        self.partition_cols = set(partition_by)
 
         # Initialize before any method calls that may reference these attributes
         self.physical_schema = None
@@ -111,44 +115,70 @@ class ParquetIndexer:
         )
 
     # ======================  METADATA ========================
-    def _get_partition_years(self) -> list[int]:
+    def _get_partition_level_values(self, col_name: str, parent: Path) -> list:
+        prefix = f"{col_name}="
         return sorted(
-            int(p.name.split("=", 1)[1])
-            for p in self.parquet_root.iterdir()
-            if p.is_dir() and p.name.startswith("year=")
+            _coerce_partition_value(p.name.split("=", 1)[1])
+            for p in parent.iterdir()
+            if p.is_dir() and p.name.startswith(prefix)
         )
 
-    def _get_partition_months(self, year: int) -> list[int]:
-        year_dir = self.parquet_root / f"year={year}"
-        return sorted(
-            int(p.name.split("=", 1)[1])
-            for p in year_dir.iterdir()
-            if p.is_dir() and p.name.startswith("month=")
+    def _build_partition_schema(self, df: pl.DataFrame) -> pa.Schema:
+        return pa.schema(
+            [pa.field(col, df[col].to_arrow().type, nullable=False) for col in self._partition_by]
         )
+
+    def _partition_path(self, partition: tuple) -> Path:
+        path = self.parquet_root
+        for col, val in zip(self._partition_by, partition):
+            path = path / f"{col}={val}"
+        return path
+
+    def _partition_glob(self) -> str:
+        parts = "/".join(f"{col}=*" for col in self._partition_by)
+        return str(self.parquet_root / parts / "*.parquet").replace("\\", "/")
+
+    def _partition_filter_sql(self, pairs: list[tuple]) -> str:
+        clauses = []
+        for vals in pairs:
+            parts = [
+                f"{col} = '{v}'" if isinstance(v, str) else f"{col} = {v}"
+                for col, v in zip(self._partition_by, vals)
+            ]
+            clauses.append(f"({' AND '.join(parts)})")
+        return " OR ".join(clauses)
+
+    def _partition_filter_expr(self, partition: tuple) -> pl.Expr:
+        exprs = [pl.col(col) == val for col, val in zip(self._partition_by, partition)]
+        return exprs[0] if len(exprs) == 1 else pl.all_horizontal(exprs)
 
     def _get_time_coverage(self) -> DateRange:
-        """Fast time coverage extraction based on first and last files on parquet_root"""
-        years = self._get_partition_years()
-
-        # ---- first file ----
-        y0 = years[0]
-        m0 = self._get_partition_months(y0)[0]
-        first_file = sorted(
-            (self.parquet_root / f"year={y0}" / f"month={m0}").rglob("*.parquet")
-        )[0]
-
-        lf_min = pl.scan_parquet(first_file).select(pl.col(self.time_col).min())
-
-        # --- latest ---
-        y1 = years[-1]
-        m1 = self._get_partition_months(y1)[-1]
-        last_file = sorted(
-            (self.parquet_root / f"year={y1}" / f"month={m1}").rglob("*.parquet")
-        )[-1]
-
-        lf_max = pl.scan_parquet(last_file).select(pl.col(self.time_col).max())
-
-        dt_min, dt_max = (r.item() for r in pl.collect_all([lf_min, lf_max]))
+        """Time coverage extraction. Uses partition directory shortcuts when year is a partition key."""
+        if "year" in self._partition_by:
+            years = self._get_partition_level_values("year", self.parquet_root)
+            y0_path = self.parquet_root / f"year={years[0]}"
+            yn_path = self.parquet_root / f"year={years[-1]}"
+            if "month" in self._partition_by:
+                first_dir = y0_path / f"month={self._get_partition_level_values('month', y0_path)[0]}"
+                last_dir = yn_path / f"month={self._get_partition_level_values('month', yn_path)[-1]}"
+            else:
+                first_dir, last_dir = y0_path, yn_path
+            first_file = sorted(first_dir.rglob("*.parquet"))[0]
+            last_file = sorted(last_dir.rglob("*.parquet"))[-1]
+            lf_min = pl.scan_parquet(first_file).select(pl.col(self.time_col).min())
+            lf_max = pl.scan_parquet(last_file).select(pl.col(self.time_col).max())
+            dt_min, dt_max = (r.item() for r in pl.collect_all([lf_min, lf_max]))
+        else:
+            all_files = list(self.parquet_root.rglob("*.parquet"))
+            row = (
+                pl.scan_parquet(all_files)
+                .select([
+                    pl.col(self.time_col).min().alias("mn"),
+                    pl.col(self.time_col).max().alias("mx"),
+                ])
+                .collect()
+            )
+            dt_min, dt_max = row["mn"][0], row["mx"][0]
 
         return DateRange(dt_min, dt_max)
 
@@ -167,12 +197,18 @@ class ParquetIndexer:
         assert self._time_range.start <= self._time_range.end
 
         # Get geoextent from first file
-        y0 = self._get_partition_years()[0]
-        m0 = self._get_partition_months(y0)[0]
+        if "year" in self._partition_by:
+            years = self._get_partition_level_values("year", self.parquet_root)
+            y0_path = self.parquet_root / f"year={years[0]}"
+            if "month" in self._partition_by:
+                m0 = self._get_partition_level_values("month", y0_path)[0]
+                first_dir = y0_path / f"month={m0}"
+            else:
+                first_dir = y0_path
+        else:
+            first_dir = self.parquet_root
 
-        first_file = next(
-            (self.parquet_root / f"year={y0}" / f"month={m0}").rglob("*.parquet")
-        )
+        first_file = next(first_dir.rglob("*.parquet"))
 
         scan = pl.scan_parquet(first_file)
 
@@ -205,7 +241,8 @@ class ParquetIndexer:
     def _init_physical_schema(self, df: pl.DataFrame) -> None:
         """When no data exists in parquet_root, collects schema from input df.
         Applies float64→float32 conversion to match what _prepare_df will write."""
-        self.physical_schema = dict(polars_float64_to_float32(df).schema)
+        physical_df = df.select([c for c in df.columns if c not in self.partition_cols])
+        self.physical_schema = dict(polars_float64_to_float32(physical_df).schema)
         self.physical_cols = set(self.physical_schema.keys())
 
     def _align_to_schema(
@@ -303,6 +340,10 @@ class ParquetIndexer:
 
         return df.with_columns(expr.alias(self.time_col))
 
+    def _max_rows_per_file(self, df: pl.DataFrame) -> int:
+        bytes_per_row = df.estimated_size("b") / len(df)
+        return max(1, int((self._target_file_mb * 1024**2) / bytes_per_row))
+
     def add_data(
         self,
         df: pl.DataFrame,
@@ -310,24 +351,54 @@ class ParquetIndexer:
         fmt: str | None = None,
     ) -> None:
         """
-        Add or Replace data in parquet_root
+        Write ``df`` into the Hive-partitioned store, using one of three paths
+        depending on how the new data relates to what is already on disk:
+
+        1. **No existing data** — first write; partitions are created from scratch.
+        2. **Non-overlapping dates** — new partitions are appended vertically; existing
+           partitions are not touched.
+        3. **Overlapping dates** — a coordinate-aligned horizontal merge is performed
+           via a DuckDB ``FULL OUTER JOIN`` on ``(time, lon, lat)``:
+
+           - *New columns only* (e.g. adding CHL where SST already exists): the new
+             columns are joined onto the existing rows. Each ``(time, lon, lat)`` point
+             ends up with both variables in one row; no rows are duplicated.
+           - *Existing columns* (same variable, same dates): values in the new ``df``
+             overwrite the stored values at matching coordinates.
+           - *Mixed* (new columns + updated values): both effects apply in one pass.
+
+        .. note::
+            Overlap detection is coordinate-based, not partition-based. Two DataFrames
+            that share a date but cover different spatial extents are appended, not merged.
 
         Args:
-            df (pl.DataFrame): New data to be added to parquet dir
-            time_mode (Literal['date', 'datetime'], optional): 'date' if daily dates (e.g. YYYY-MM-DD) or datetime (e.g. YYYY-MM-DD HH:MM:SS). Defaults to 'date'.
-            fmt (str | None, optional): String format to parse time column. Defaults to None (auto-detect in to_datetime function).
+            df: DataFrame containing at least the time, lon, and lat columns. Any
+                non-temporal partition columns (see ``partition_by``) must also be present.
+            time_mode: ``'date'`` for daily resolution (``YYYY-MM-DD``), ``'datetime'``
+                for sub-daily. Defaults to ``'date'``.
+            fmt: strptime format string, only valid when the time column is a plain string.
+                Leave ``None`` to auto-detect.
         """
         logger.info(f"Saving partitioned parquet to {self.parquet_root}")
 
         # Resolve time column
         df = self._resolve_time_col(df, time_mode=time_mode, fmt=fmt)
 
+        # Strict validation: non-temporal partition columns must already be in the DataFrame
+        custom_cols = set(self._partition_by) - _TIME_COMPONENTS
+        missing_partition_cols = custom_cols - set(df.columns)
+        if missing_partition_cols:
+            raise ValueError(
+                f"Partition columns {missing_partition_cols} not found in DataFrame. "
+                "Non-temporal partition columns must be present in the data."
+            )
+
         first_write = not self._dataset_meta_initialized
 
         if self.physical_schema is None:
             self._init_physical_schema(df)
 
-        df = self._prepare_df(df)  # Adds year/month partition columns
+        df = self._prepare_df(df)  # Adds auto-derived partition columns
 
         if any(self.parquet_root.rglob("*.parquet")):
             is_resolved = self.resolve_dims_overlap(df)
@@ -346,9 +417,9 @@ class ParquetIndexer:
             df.to_arrow(),
             base_dir=str(self.parquet_root),
             format="parquet",
-            partitioning=ds.partitioning(self.partition_schema, flavor="hive"),
+            partitioning=ds.partitioning(self._build_partition_schema(df), flavor="hive"),
             existing_data_behavior="overwrite_or_ignore",
-            max_rows_per_file=MAX_ROWS_PER_FILE,
+            max_rows_per_file=self._max_rows_per_file(df),
         )
 
         # get metadata from first write
@@ -422,35 +493,32 @@ class ParquetIndexer:
             self.lon_col,
         } - new_cols
 
-        affected = df.select(["year", "month"]).unique().rows()
+        # Classify partition columns: time-derived ones are dropped from df_new and
+        # re-derived after the JOIN; custom ones are kept in df_new and added to the key.
+        time_part_cols = [c for c in self._partition_by if c in _TIME_COMPONENTS]
+        custom_part_cols = [c for c in self._partition_by if c not in _TIME_COMPONENTS]
+
+        affected = df.select(self._partition_by).unique().rows()
 
         # Separate partitions that already exist from genuinely new ones
-        existing_pairs = [
-            (y, m)
-            for y, m in affected
-            if any((self.parquet_root / f"year={y}" / f"month={m}").rglob("*.parquet"))
-        ]
-        new_pairs = [(y, m) for y, m in affected if (y, m) not in set(existing_pairs)]
+        existing_pairs = [p for p in affected if any(self._partition_path(p).rglob("*.parquet"))]
+        new_pairs = [p for p in affected if p not in set(existing_pairs)]
 
         # ---------- READ ALL EXISTING PARTITIONS IN ONE DUCKDB QUERY + JOIN ----------
         if existing_pairs:
             conn = duckdb.connect()
 
-            # Register new data without partition cols (re-derived from time after join)
-            conn.register("df_new", df.drop(["year", "month"]))
+            # Drop only time-derived partition cols from df_new; custom cols stay as join keys
+            conn.register("df_new", df.drop(time_part_cols) if time_part_cols else df)
 
-            # Columns to exclude from existing data: partition cols + cols being replaced
-            exclude_cols = {"year", "month"} | duplicated_cols
+            # Exclude time-derived partition cols from existing CTE (re-derived after JOIN);
+            # custom partition cols remain so they survive the FULL OUTER JOIN correctly.
+            exclude_cols = set(time_part_cols) | duplicated_cols
             exclude_sql = ", ".join(exclude_cols)
 
-            filter_sql = " OR ".join(
-                f"(year = {y} AND month = {m})" for y, m in existing_pairs
-            )
-            # DuckDB requires forward slashes
-            parquet_glob = str(
-                self.parquet_root / "year=*" / "month=*" / "*.parquet"
-            ).replace("\\", "/")
-            key_cols = f"{self.time_col}, {self.lon_col}, {self.lat_col}"
+            filter_sql = self._partition_filter_sql(existing_pairs)
+            parquet_glob = self._partition_glob()
+            key_cols = ", ".join([self.time_col, self.lon_col, self.lat_col] + custom_part_cols)
 
             merged = conn.execute(
                 f"""
@@ -466,47 +534,40 @@ class ParquetIndexer:
 
             conn.close()
 
-            # Re-derive partition columns from the merged time column
-            merged = merged.with_columns(
-                [
-                    pl.col(self.time_col).dt.year().cast(pl.Int32).alias("year"),
-                    pl.col(self.time_col).dt.month().cast(pl.Int32).alias("month"),
-                ]
-            )
+            # Re-derive time-component partition cols from the merged time column
+            _time_rederive: dict[str, pl.Expr] = {
+                "year": pl.col(self.time_col).dt.year().cast(pl.Int32),
+                "month": pl.col(self.time_col).dt.month().cast(pl.Int32),
+                "day": pl.col(self.time_col).dt.day().cast(pl.Int32),
+            }
+            rederive = [_time_rederive[c].alias(c) for c in time_part_cols]
+            if rederive:
+                merged = merged.with_columns(rederive)
 
-            for year, month in existing_pairs:
-                partition_data = merged.filter(
-                    (pl.col("year") == year) & (pl.col("month") == month)
-                )
-                partition_data = self._align_to_schema(
-                    partition_data, include_partitions=False
-                )
-                self.atomic_partition_write(partition_data, (year, month))
+            for partition in existing_pairs:
+                partition_data = merged.filter(self._partition_filter_expr(partition))
+                partition_data = self._align_to_schema(partition_data, include_partitions=False)
+                self.atomic_partition_write(partition_data, partition)
 
         # ---------- WRITE GENUINELY NEW PARTITIONS DIRECTLY ----------
-        for year, month in new_pairs:
+        for partition in new_pairs:
             df_write = self._align_to_schema(
-                df.filter((pl.col("year") == year) & (pl.col("month") == month)),
+                df.filter(self._partition_filter_expr(partition)),
                 include_partitions=False,
             )
-            self.atomic_partition_write(df_write, (year, month))
+            self.atomic_partition_write(df_write, partition)
 
         return True
 
     def atomic_partition_write(
-        self, df: pl.DataFrame, partition: tuple[int, int]
+        self, df: pl.DataFrame, partition: tuple
     ) -> None:
         """
-        Atomically replace (i.e. save file with tmp name and rename it after in parquet_dir, avoiding overwrite)
-        with year/month Hive-style partition: i.e. year=YYYY/month=MM.
+        Atomically replace a Hive-style partition directory by writing to a temp path first,
+        then renaming into place.
         """
-        out = self.parquet_root
-        year, month = partition
-
-        final_path = out / f"year={year}" / f"month={month}"
-
-        # ------------ Write into a temp folder ------------
-        tmp_path = out / f".tmp_write_{year}_{month}"
+        final_path = self._partition_path(partition)
+        tmp_path = self.parquet_root / f".tmp_write_{'_'.join(str(v) for v in partition)}"
         if tmp_path.exists():
             shutil.rmtree(tmp_path)
 
@@ -516,71 +577,74 @@ class ParquetIndexer:
             df.to_arrow(),
             base_dir=str(tmp_path),
             format="parquet",
-            max_rows_per_file=MAX_ROWS_PER_FILE,
+            max_rows_per_file=self._max_rows_per_file(df),
         )
         # Remove existing partition safely
         if final_path.exists():
             shutil.rmtree(final_path, ignore_errors=True)
 
-        # Ensure parent year folder exists
         final_path.parent.mkdir(parents=True, exist_ok=True)
 
         tmp_path.rename(final_path)
 
     def _resolve_files(self, dates: Optional[Union[list, tuple]]) -> list[Path]:
         """
-        Select parquet files efficiently based on dates if the data is partitioned
-        by year/month[/day]. If not partitioned, return all files.
+        Select parquet files efficiently based on dates.
+        Uses partition directory shortcuts when year/month are partition keys;
+        falls back to returning all files (scan() LazyFrame filter handles the rest).
         """
         all_files = sorted(self.parquet_root.rglob("*.parquet"))
         if dates is None:
             return all_files
 
+        has_year = "year" in self._partition_by
+        has_month = "month" in self._partition_by
+
         # ---- range of dates ----
         if isinstance(dates, tuple) and len(dates) == 2:
             start, end = map(to_datetime, dates)
 
-            # Build the set of (year, month) partitions covered by the range
-            valid_partitions: set[tuple[int, int]] = set()
-            y, m = start.year, start.month
-            while (y, m) <= (end.year, end.month):
-                valid_partitions.add((y, m))
-                m += 1
-                if m > 12:
-                    m = 1
-                    y += 1
-
-            return [
-                f
-                for f in all_files
-                if any(
-                    f"year={y}/month={mo}" in f.as_posix() for y, mo in valid_partitions
-                )
-            ]
+            if has_year and has_month:
+                valid_partitions: set[tuple[int, int]] = set()
+                y, m = start.year, start.month
+                while (y, m) <= (end.year, end.month):
+                    valid_partitions.add((y, m))
+                    m += 1
+                    if m > 12:
+                        m = 1
+                        y += 1
+                return [
+                    f
+                    for f in all_files
+                    if any(f"year={y}/month={mo}" in f.as_posix() for y, mo in valid_partitions)
+                ]
+            elif has_year:
+                valid_years = set(range(start.year, end.year + 1))
+                return [f for f in all_files if any(f"year={y}" in f.as_posix() for y in valid_years)]
+            else:
+                return all_files
 
         # ---- Sparse list of dates ----
         elif isinstance(dates, list):
-            result: set[Path] = set()
-
-            for d in dates:
-                try:
-                    dt = to_datetime(d)
-                    year, month = dt.year, dt.month
-
-                    patterns = (
-                        f"year={year}/month={month}",
-                        f"{year}/{month:02d}",
-                        f"{year}-{month:02d}",
-                    )
-
-                    for pattern in patterns:
-                        result.update(self.parquet_root.rglob(f"*{pattern}*/*.parquet"))
-
-                except Exception as e:
-                    logger.exception(f"Failed to parse date '{d}': {e}")
-                    continue
-
-            return sorted(result) or all_files
+            if has_year and has_month:
+                result: set[Path] = set()
+                for d in dates:
+                    try:
+                        dt = to_datetime(d)
+                        year, month = dt.year, dt.month
+                        patterns = (
+                            f"year={year}/month={month}",
+                            f"{year}/{month:02d}",
+                            f"{year}-{month:02d}",
+                        )
+                        for pattern in patterns:
+                            result.update(self.parquet_root.rglob(f"*{pattern}*/*.parquet"))
+                    except Exception as e:
+                        logger.exception(f"Failed to parse date '{d}': {e}")
+                        continue
+                return sorted(result) or all_files
+            else:
+                return all_files
 
         else:
             raise ValueError("`dates` must be list or (start, end) tuple")
@@ -703,15 +767,20 @@ class ParquetIndexer:
         return pl.read_parquet_schema(first_file)
 
     def _prepare_df(self, df: pl.DataFrame) -> pl.DataFrame:
-        """
-        Add year and month to df for 'hive' partitioning. Convert columns float64 to float32 (for better storage)
-        """
-        return df.with_columns(
-            [
-                pl.col(self.time_col).dt.year().cast(pl.Int32).alias("year"),
-                pl.col(self.time_col).dt.month().cast(pl.Int32).alias("month"),
-            ]
-        ).pipe(polars_float64_to_float32)
+        """Add partition columns for Hive partitioning and downcast float64→float32."""
+        _time_exprs: dict[str, pl.Expr] = {
+            "year": pl.col(self.time_col).dt.year().cast(pl.Int32),
+            "month": pl.col(self.time_col).dt.month().cast(pl.Int32),
+            "day": pl.col(self.time_col).dt.day().cast(pl.Int32),
+        }
+        derive = [
+            expr.alias(col)
+            for col, expr in _time_exprs.items()
+            if col in self._partition_by and col not in df.columns
+        ]
+        if derive:
+            df = df.with_columns(derive)
+        return df.pipe(polars_float64_to_float32)
 
     # ----------------------------------------
     #                  PLOTS

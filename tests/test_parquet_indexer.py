@@ -195,3 +195,107 @@ class TestPlotCache:
         loaded_indexer.plot._get_agg_df("sst", "month", None, None)
         loaded_indexer.plot._get_agg_df("sst", "season", None, None)
         assert len(loaded_indexer.plot._cache) == 2
+
+
+# ---------------------------------------------------------------------------
+# Configurable partition_by
+# ---------------------------------------------------------------------------
+
+class TestPartitionBy:
+
+    def test_default_partition_attributes(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir)
+        assert idx._partition_by == ["year", "month"]
+        assert idx.partition_cols == {"year", "month"}
+
+    def test_year_month_day_dirs(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "month", "day"])
+        df = make_grid_df([date(2021, 6, 15), date(2021, 6, 16)])
+        idx.add_data(df)
+        assert (parquet_dir / "year=2021" / "month=6" / "day=15").exists()
+        assert (parquet_dir / "year=2021" / "month=6" / "day=16").exists()
+
+    def test_year_only_dirs(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year"])
+        df = make_grid_df([date(2021, 6, 15), date(2021, 7, 1)])
+        idx.add_data(df)
+        assert (parquet_dir / "year=2021").exists()
+        assert not any((parquet_dir / "year=2021").iterdir().__next__().name.startswith("month=")
+                       for _ in [None])
+
+    def test_custom_nontemporal_col_dirs(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "region"])
+        df = make_grid_df([date(2021, 6, 15)]).with_columns(pl.lit("atlantic").alias("region"))
+        idx.add_data(df)
+        assert (parquet_dir / "year=2021" / "region=atlantic").exists()
+
+    def test_missing_custom_col_raises(self, parquet_dir, jan_df):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "region"])
+        with pytest.raises(ValueError, match="region"):
+            idx.add_data(jan_df)
+
+    def test_roundtrip_year_month_day(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "month", "day"])
+        df = make_grid_df([date(2021, 6, 15), date(2021, 6, 16)])
+        idx.add_data(df)
+        loaded = idx.load()
+        assert len(loaded) == len(df)
+        assert set(loaded["time"].cast(pl.Utf8).to_list()) == {"2021-06-15", "2021-06-16"}
+
+    def test_roundtrip_custom_col(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "region"])
+        df = make_grid_df([date(2021, 6, 15), date(2021, 7, 1)]).with_columns(
+            pl.lit("atlantic").alias("region")
+        )
+        idx.add_data(df)
+        assert len(idx.load()) == len(df)
+
+    def test_time_coverage_year_only(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year"])
+        df = make_grid_df([date(2021, 3, 1), date(2022, 9, 1)])
+        idx.add_data(df)
+        cov = idx.get_time_coverage()
+        assert cov.start.date() == date(2021, 3, 1)
+        assert cov.end.date() == date(2022, 9, 1)
+
+    def test_time_coverage_no_temporal_partition(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["region"])
+        df = make_grid_df([date(2021, 3, 1), date(2022, 9, 1)]).with_columns(
+            pl.lit("atlantic").alias("region")
+        )
+        idx.add_data(df)
+        cov = idx.get_time_coverage()
+        assert cov.start.date() == date(2021, 3, 1)
+        assert cov.end.date() == date(2022, 9, 1)
+
+    def test_resolve_files_year_only_fast_path(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["year"])
+        df = make_grid_df([date(2021, 6, 15), date(2022, 1, 1)])
+        idx.add_data(df)
+        files = idx._resolve_files(("2021-01-01", "2021-12-31"))
+        assert files
+        assert all("year=2021" in str(f) for f in files)
+        assert not any("year=2022" in str(f) for f in files)
+
+    def test_resolve_files_no_temporal_returns_all(self, parquet_dir):
+        idx = ParquetIndexer(parquet_dir, partition_by=["region"])
+        df = make_grid_df([date(2021, 6, 15), date(2022, 1, 1)]).with_columns(
+            pl.lit("atlantic").alias("region")
+        )
+        idx.add_data(df)
+        all_files = idx._resolve_files(None)
+        range_files = idx._resolve_files(("2021-01-01", "2021-12-31"))
+        assert set(range_files) == set(all_files)
+
+    def test_overlap_resolution_custom_partition(self, parquet_dir):
+        """Overlap resolution with a custom partition col merges correctly."""
+        idx = ParquetIndexer(parquet_dir, partition_by=["year", "region"])
+        df1 = make_grid_df([date(2021, 6, 15)]).with_columns(pl.lit("atlantic").alias("region"))
+        idx.add_data(df1)
+
+        df2 = df1.with_columns(pl.lit(0.5).alias("chl"))
+        idx.add_data(df2)
+
+        loaded = idx.load()
+        assert "chl" in loaded.columns
+        assert "sst" in loaded.columns
