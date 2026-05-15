@@ -2,6 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 [![PyPI](https://img.shields.io/pypi/v/h2mare)](https://pypi.org/project/h2mare/)
+[![Docs](https://img.shields.io/badge/docs-github%20pages-blue)](https://h2ugoparra.github.io/h2mare/)
 
 A Python pipeline for downloading and preprocessing multi-source oceanographic and atmospheric data into analysis-ready formats. H2MARE streamlines the acquisition and harmonization of data from major climate and ocean observation services, optimized for large-scale spatiotemporal analysis.
 
