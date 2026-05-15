@@ -60,7 +60,7 @@ Defines variables, dataset IDs, bounding boxes, and processing parameters. Copy 
 
 ```env
 # Path to external or large-capacity storage for processed Zarr files
-STORE_DIR=/path/to/your/storage
+STORE_ROOT=/path/to/your/storage
 
 # CMEMS credentials (required for SST, SSH, MLD, CHL, O2, SEAPODYM)
 CMEMS_USERNAME=your_username

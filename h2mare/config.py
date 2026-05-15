@@ -32,7 +32,6 @@ class Settings:
         # Raw Data (immutable)
         self.RAW_DIR = self.DATA_DIR / "raw"
         self.DOWNLOADS_DIR = self.RAW_DIR / "downloads"
-        self.ARCHIVE_DIR = self.RAW_DIR / "archive"
 
         # Interim data (processing stages)
         self.INTERIM_DIR = self.DATA_DIR / "interim"
@@ -43,14 +42,11 @@ class Settings:
         self.PARQUET_DIR = self.PROCESSED_DIR / "parquet"
         self.METADATA_DIR = self.PROCESSED_DIR / "metadata"
 
-        # External deliverables
-        self.EXTERNAL_DIR = self.DATA_DIR / "external"
-
         # Logs
         self.LOGS_DIR = self.BASE_DIR / "logs"
 
         # External Storage (where all data lives)
-        self.STORE_DIR = self._get_store_dir()
+        self.STORE_ROOT = self._get_store_dir()
 
         # Only create directories when running inside an h2mare project (config.yaml found).
         # When h2mare is used as a library dependency, skip directory creation so we don't
@@ -96,7 +92,7 @@ class Settings:
 
     def _get_store_dir(self) -> Path | None:
         """Get external storage directory from environment."""
-        if store_dir := os.getenv("STORE_DIR"):
+        if store_dir := os.getenv("STORE_ROOT"):
             return Path(store_dir).resolve()
         return None
 
@@ -104,12 +100,10 @@ class Settings:
         """Create necessary directories on first run."""
         dirs = [
             self.DOWNLOADS_DIR,
-            self.ARCHIVE_DIR,
             self.INTERIM_DIR,
             self.ZARR_DIR,
             self.PARQUET_DIR,
             self.METADATA_DIR,
-            self.EXTERNAL_DIR,
             self.LOGS_DIR,
         ]
 

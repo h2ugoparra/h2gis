@@ -42,12 +42,12 @@ def resolve_store_path(
 ) -> Path:
     """
     Resolve store directory path with fallback hierarchy.
-    Adds local_folder in var_config to STORE_DIR or ARCHIVE_DIR.
+    Adds local_folder in var_config to STORE_ROOT or ZARR_DIR.
 
     Priority:
         1. Explicit store_root argument
-        2. STORE_DIR environment variable
-        3. settings.ARCHIVE_DIR
+        2. STORE_ROOT environment variable
+        3. settings.ZARR_DIR
 
     Args:
         var_config: Variable configuration (for local_folder)
@@ -62,10 +62,10 @@ def resolve_store_path(
     """
     if store_root is not None:
         path = Path(store_root)
-    elif settings.STORE_DIR is not None:
-        path = settings.STORE_DIR / var_config.local_folder
+    elif settings.STORE_ROOT is not None:
+        path = settings.STORE_ROOT / var_config.local_folder
     else:
-        path = settings.ARCHIVE_DIR / var_config.local_folder
+        path = settings.ZARR_DIR / var_config.local_folder
 
     path = path.resolve()
 

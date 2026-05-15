@@ -24,7 +24,7 @@ class BaseDownloader(ABC):
     Args:
         var_key: Variable key from ``app_config.variables``.
         app_config: Application configuration; loaded from settings if None.
-        store_root: Root for processed zarr files; defaults to STORE_DIR.
+        store_root: Root for processed zarr files; defaults to STORE_ROOT.
         download_root: Root for raw downloads; defaults to DOWNLOADS_DIR.
     """
 

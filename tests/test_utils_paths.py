@@ -51,15 +51,15 @@ class TestResolveStorePath:
 
     def test_store_dir_used_when_available(self, tmp_path):
         mock_settings = MagicMock()
-        mock_settings.STORE_DIR = tmp_path
+        mock_settings.STORE_ROOT = tmp_path
         with patch("h2mare.utils.paths.settings", mock_settings):
             result = resolve_store_path(_VAR_CONFIG, warn_if_missing=False)
         assert result == (tmp_path / _VAR_CONFIG.local_folder).resolve()
 
-    def test_falls_back_to_archive_dir_when_store_dir_none(self, tmp_path):
+    def test_falls_back_to_zarr_dir_when_store_root_none(self, tmp_path):
         mock_settings = MagicMock()
-        mock_settings.STORE_DIR = None
-        mock_settings.ARCHIVE_DIR = tmp_path
+        mock_settings.STORE_ROOT = None
+        mock_settings.ZARR_DIR = tmp_path
         with patch("h2mare.utils.paths.settings", mock_settings):
             result = resolve_store_path(_VAR_CONFIG, warn_if_missing=False)
         assert result == (tmp_path / _VAR_CONFIG.local_folder).resolve()

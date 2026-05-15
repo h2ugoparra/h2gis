@@ -75,7 +75,7 @@ def run(
     store_path: Optional[Path] = typer.Option(
         None,
         "--store-path",
-        help="Override the Zarr store root (defaults to STORE_DIR from .env).",
+        help="Override the Zarr store root (defaults to STORE_ROOT from .env).",
     ),
     dry_run: bool = typer.Option(
         False,
@@ -131,10 +131,10 @@ def run(
         )
         raise typer.Exit(code=1)
 
-    store_root = store_path or settings.STORE_DIR
+    store_root = store_path or settings.STORE_ROOT
     if store_root is None:
         typer.echo(
-            "Error: STORE_DIR is not set. Define it in .env or pass --store-path.",
+            "Error: STORE_ROOT is not set. Define it in .env or pass --store-path.",
             err=True,
         )
         raise typer.Exit(code=1)

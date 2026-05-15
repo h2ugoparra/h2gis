@@ -96,7 +96,7 @@ class Compiler:
         self.local_store_root = (
             local_store_root or settings.ZARR_DIR / self.var_config.local_folder
         )
-        self.remote_store_root = remote_store_root or settings.STORE_DIR
+        self.remote_store_root = remote_store_root or settings.STORE_ROOT
 
         if self.var_config.bbox is not None:
             self.bbox = BBox.from_tuple(self.var_config.bbox)

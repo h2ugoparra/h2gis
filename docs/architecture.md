@@ -1,6 +1,6 @@
 # Architecture
 
-H2GIS is a three-stage pipeline: **Download → Convert → Compile**, with an optional **Extract** step for point or geometry outputs.
+H2MARE is a five-stage pipeline: **Download → Convert → Compile → Index → Visualize**, with an optional **Extract** step for point or geometry inputs.
 
 ---
 
@@ -8,16 +8,20 @@ H2GIS is a three-stage pipeline: **Download → Convert → Compile**, with an o
 
 ```
 CLI (h2mare/cli/main.py)
-  └── PipelineManager (pipeline_manager.py)
-        ├── Downloader          → raw NetCDF / GRIB  →  data/raw/downloads/
-        ├── Netcdf2Zarr         → regridded Zarr      →  $STORE_DIR/<local_folder>/
-        └── Compiler            → unified h2ds Zarr   →  $STORE_DIR/h2ds/
+  └── PipelineManager
+        ├── Downloader (CMEMSDownloader | AVISODownloader | CDSDownloader)
+        ├── Netcdf2Zarr
+        │     └── ZarrCatalog        (metadata index per variable)
+        └── Compiler
 
-ZarrCatalog (storage/zarr_catalog.py)
-  └── Parquet index per variable  →  data/processed/metadata/
+Zarr2Parquet                         (uses ParquetIndexer)
+Extractor                            (uses ParquetIndexer)
+parquet2csv                          (reads Parquet directly)
 
-Extractor (processing/extractor.py)
-  └── Point / geometry extraction →  data/processed/parquet/
+ParquetIndexer
+  └── ParquetPlotter
+        ├── time_series()
+        └── spatial_maps()
 ```
 
 ---
@@ -34,7 +38,7 @@ Each downloader resolves the date range to fetch (explicit or inferred from the 
 ## Stage 2 — Convert
 
 **Class:** `Netcdf2Zarr` (`format_converters/netcdf2zarr.py`)  
-**Output:** Zarr stores in `$STORE_DIR/<local_folder>/`
+**Output:** Zarr stores in `$STORE_ROOT/<local_folder>/`
 
 Raw files are opened with xarray, regridded to a daily time axis, and written (or appended) as chunked Zarr stores. `ZarrCatalog` updates its Parquet index after each write so subsequent runs can resume from where they left off.
 
@@ -43,11 +47,12 @@ Raw files are opened with xarray, regridded to a daily time axis, and written (o
 ## Stage 3 — Compile
 
 **Class:** `Compiler` (`processing/compiler.py`)  
-**Output:** unified `h2ds` Zarr in `$STORE_DIR/h2ds/`
+**Output:** unified `h2ds` Zarr in `$STORE_ROOT/h2ds/`
 
 All per-variable Zarr stores are opened, interpolated to the common 0.25° × 0.25° daily grid defined in `config.yaml`, and merged into a single dataset. Variables without data for a given period are skipped gracefully. The compiled dataset is also synced to a local copy for fast access.
 
 Special variables handled outside the general path:
+
 - **`bathy`** — read from a static NetCDF file, no time dimension
 - **`moon`** — computed on the fly from the `ephem` library
 - **`o2`** — depth-sliced before interpolation
@@ -56,7 +61,7 @@ Special variables handled outside the general path:
 
 ## ZarrCatalog
 
-`ZarrCatalog` maintains a Parquet index for each variable key. It tracks:
+`ZarrCatalog` maintains metadata for each variable key. It tracks:
 
 - File paths, modification times, and scan timestamps
 - Temporal coverage (`start_date`, `end_date`) and provenance per source dataset
@@ -70,10 +75,39 @@ The catalog is used by `open_dataset` for efficient range queries without openin
 
 `Extractor` reads h2ds Zarr stores and extracts time series at:
 
-- **Point locations** — from a CSV file with `lat`/`lon` columns
+- **Point locations** — from a CSV file with `lat`/`lon`/`time` columns
 - **Geometries** — from a SHP file (polygons or lines)
 
-Extraction is parallelised with `ThreadPoolExecutor`. Output is written as Parquet files under `data/processed/parquet/`.
+Geometry extraction uses `rioxarray.rio.clip()` and is parallelised with `ThreadPoolExecutor`. Point extraction vectorises coords with a module-level cached `KDTree` for spatial lookup and `numpy.searchsorted` for time, then selects with `isel()` (faster than coordinate-based `sel()`).
+
+---
+
+## ParquetIndexer
+
+`ParquetIndexer` (`storage/parquet_indexer.py`) manages the Hive-partitioned Parquet store (`year=YYYY/month=MM/`). It is used by `Zarr2Parquet` to persist h2ds data and can be used directly for analysis.
+
+Key behaviors:
+
+- **Atomic writes** — each partition is written to a `.tmp_write_YYYY_MM` directory and renamed into place, preventing corrupt reads during a write.
+- **Overlap resolution** — when new data overlaps existing partitions in time or columns, `resolve_dims_overlap()` merges them with a single DuckDB `FULL OUTER JOIN` across all affected files, then rewrites each partition atomically.
+- **Lazy scanning** — `scan()` returns a Polars `LazyFrame` filtered by date range and/or bounding box without loading the full dataset; `load()` collects it.
+- **Schema evolution** — new columns in incoming data are detected and added to the physical schema; missing columns in existing partitions are backfilled with nulls.
+- **Float32 storage** — float64 columns are downcast to float32 on write to reduce file size.
+
+`ParquetIndexer` exposes a `plot` cached property that returns a `ParquetPlotter` instance. The cache is invalidated automatically after each `add_data()` call.
+
+---
+
+## ParquetPlotter
+
+`ParquetPlotter` (`storage/parquet_plotter.py`) is the visualization accessor for `ParquetIndexer`. It is accessed via `indexer.plot` — do not instantiate it directly.
+
+| Method | Description |
+|---|---|
+| `time_series(var, agg_by)` | Interactive Plotly line chart aggregated over space and time (`day`, `week`, `month`, `season`, `year`) |
+| `spatial_maps(var, agg_by)` | Climatological panel maps — 12 panels for `month`, 4 for `season` — showing the long-term mean at each grid cell |
+
+Aggregation results are cached internally and cleared when new data is written.
 
 ---
 

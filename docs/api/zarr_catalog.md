@@ -32,7 +32,7 @@ ZarrCatalog(
 |---|---|---|
 | `var_key` | — | Variable key; must exist in `config.yaml` |
 | `time_resolution` | `YEAR` | Granularity used for the `period` column in the index |
-| `store_root` | `STORE_DIR/<local_folder>` | Directory scanned for `.zarr` files |
+| `store_root` | `STORE_ROOT/<local_folder>` | Directory scanned for `.zarr` files |
 | `metadata_root` | `data/processed/metadata/` | Directory for the Parquet catalog file |
 | `auto_refresh` | `True` | Check for new/modified files on each `.df` access |
 

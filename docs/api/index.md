@@ -11,3 +11,6 @@ The main classes you interact with directly.
 | `ZarrCatalog` | `h2mare.storage.zarr_catalog` | Query and manage Zarr stores |
 | `Extractor` | `h2mare.processing.extractor` | Extract time series at points or geometries |
 | `PipelineManager` | `h2mare.pipeline_manager` | Orchestrate the full download → convert pipeline |
+| `ParquetIndexer` | `h2mare.storage.parquet_indexer` | Hive-partitioned Parquet store — write, read, and query |
+| `ParquetPlotter` | `h2mare.storage.parquet_plotter` | Visualization accessor for `ParquetIndexer` (via `indexer.plot`) |
+| `parquet2csv` | `h2mare.format_converters.parquet2csv` | Export Parquet data to daily / monthly / yearly CSV files |

@@ -35,7 +35,7 @@ class AVISODownloader(BaseDownloader):
         Args:
             var_key: Variable key from app_config.variables.
             app_config: Application configuration. If None, loads from settings.
-            store_root: Root directory for zarr files. If None, uses settings.STORE_DIR.
+            store_root: Root directory for zarr files. If None, uses settings.STORE_ROOT.
             download_root: Root directory for downloads. If None, uses settings.DOWNLOADS_DIR.
         """
         super().__init__(

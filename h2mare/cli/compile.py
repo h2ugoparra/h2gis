@@ -52,7 +52,7 @@ def compile(
     store_path: Optional[Path] = typer.Option(
         None,
         "--store-path",
-        help="Override the Zarr store root (defaults to STORE_DIR from .env).",
+        help="Override the Zarr store root (defaults to STORE_ROOT from .env).",
     ),
 ) -> None:
     """Merge per-variable Zarr stores into the unified h2ds compiled dataset."""
@@ -89,7 +89,7 @@ def compile(
 
     from h2mare.processing.compiler import Compiler
 
-    Compiler(remote_store_root=store_path or settings.STORE_DIR).run(
+    Compiler(remote_store_root=store_path or settings.STORE_ROOT).run(
         start_date=start_date,
         end_date=end_date,
         var_keys=list(vars) if vars else None,

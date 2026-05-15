@@ -43,3 +43,6 @@ nav:
     - Compiler: api/compiler.md
     - ZarrCatalog: api/zarr_catalog.md
     - Extractor: api/extractor.md
+    - ParquetIndexer: api/parquet_indexer.md
+    - ParquetPlotter: api/parquet_plotter.md
+    - parquet2csv: api/parquet2csv.md

@@ -414,11 +414,13 @@ class ParquetIndexer:
         # below. Without this, new cols present in partially-written partitions (e.g.
         # from an interrupted prior run) would appear in both the existing CTE and
         # df_new, producing duplicate column names in the DuckDB join.
+        # Exclude new_cols: they were never written to any existing parquet file so
+        # DuckDB would raise a BinderException if they appear in the EXCLUDE list.
         duplicated_cols = self.physical_cols.intersection(n_cols) - {
             self.time_col,
             self.lat_col,
             self.lon_col,
-        }
+        } - new_cols
 
         affected = df.select(["year", "month"]).unique().rows()
 

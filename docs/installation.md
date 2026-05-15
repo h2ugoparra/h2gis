@@ -23,7 +23,7 @@ cd h2mare
 uv sync
 ```
 
-Include development dependencies (pytest, black, isort):
+Include development dependencies (pytest, ruff):
 
 ```bash
 uv sync --dev
@@ -35,7 +35,7 @@ uv sync --dev
 h2mare --help
 ```
 
-Expected output lists the available commands: `run`, `compile`, `convert`.
+Expected output lists the available commands: `run`, `compile`, `convert`, `catalog`
 
 ## First-time setup
 
@@ -51,37 +51,40 @@ curl -O https://raw.githubusercontent.com/h2ugoparra/h2mare/main/config.yaml
 
 ### `.env`
 
-Create a `.env` file. At minimum `STORE_DIR` is required:
+Create a `.env` file with at minimum:
 
 ```env
-# Path to external or large-capacity storage for processed Zarr files
-STORE_DIR=/path/to/your/storage
-
-# CMEMS credentials (required for SST, SSH, MLD, CHL, O2, SEAPODYM)
-CMEMS_USERNAME=your_username
-CMEMS_PASSWORD=your_password
-
-# AVISO credentials (required for FSLE, Eddies)
-AVISO_USERNAME=your_username
-AVISO_PASSWORD=your_password
-AVISO_FTP_SERVER=ftp-access.aviso.altimetry.fr
+STORE_ROOT=/path/to/your/storage
 ```
 
-ERA5 / CDS credentials are configured separately via the `cdsapi` client — see the [CDS documentation](https://cds.climate.copernicus.eu/how-to-api) for setup.
+See [Configuration](configuration.md#env) for the full list of variables and credentials.
 
-> **Tip:** Set the `H2MARE_ROOT` environment variable to point to a directory containing your `config.yaml` and `.env` if you want to run `h2mare` from a different location.
+### Where to place these files
+
+By default, h2mare searches for `config.yaml` by walking up from your current working directory. As long as you run `h2mare` from inside your project tree, no extra configuration is needed.
+
+If auto-detection fails — for example, you run `h2mare` from an unrelated directory, or a script elsewhere imports h2mare — set `H2MARE_ROOT` to the directory containing your `config.yaml` and `.env`:
+
+```env
+H2MARE_ROOT=/path/to/your/h2mare/project
+```
+
+Without it, h2mare falls back to `~/.h2mare` (library mode), where no data directories are created and commands will fail.
 
 ## Data storage layout
 
 ```
-$STORE_DIR/
-└── <var_config.local_folder>/   # one directory per variable key
-    └── *.zarr                   # yearly or monthly Zarr stores
-
 $PROJECT_ROOT/
-├── data/raw/downloads/          # raw NetCDF / GRIB files
+├── data/raw/
+│   └── downloads/<local_folder>/    # raw NetCDF / GRIB files from downloaders
+├── data/interim/                    # temporary scratch files (checkpoints, tmp Zarr)
 ├── data/processed/
-│   ├── parquet/                 # extracted point / geometry time series
-│   └── metadata/                # ZarrCatalog Parquet indices
-└── logs/                        # pipeline log files
+│   ├── zarr/<local_folder>/         # per-variable Zarr stores (fallback when STORE_ROOT is not set)
+│   ├── parquet/                     # Hive-partitioned Parquet store
+│   └── metadata/                    # ZarrCatalog Parquet indices
+└── logs/                            # pipeline log files
+
+$STORE_ROOT/<local_folder>/          # per-variable Zarr stores (when STORE_ROOT is set)
 ```
+
+`local_folder` is defined per variable in `config.yaml` (e.g. `CMEMS_SST`, `CMEMS_SSH`). When `STORE_ROOT` is set, Zarr output goes there; otherwise it falls back to `data/processed/zarr/`.

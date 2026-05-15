@@ -225,8 +225,8 @@ class TestCleanup:
         with patch("h2mare.downloader.base.settings") as mock_settings:
             mock_settings.app_config = cfg
             mock_settings.DOWNLOADS_DIR = tmp_path
-            mock_settings.STORE_DIR = None
-            mock_settings.ARCHIVE_DIR = tmp_path / "archive"
+            mock_settings.STORE_ROOT = None
+            mock_settings.ZARR_DIR = tmp_path / "zarr"
             d = _DummyDownloader("sst", app_config=cfg, download_root=tmp_path)
 
         d._cleanup_empty_download_dir()

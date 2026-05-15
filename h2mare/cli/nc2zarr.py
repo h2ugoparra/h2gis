@@ -24,7 +24,7 @@ Notes
 -----
 - Raw files must match the regex ``pattern`` defined for the variable in
   ``config.yaml``.
-- Zarr stores are written to ``STORE_DIR/<local_folder>/`` (from ``.env``).
+- Zarr stores are written to ``STORE_ROOT/<local_folder>/`` (from ``.env``).
 - Provenance sidecars (``*_prov.json``) are written alongside each Zarr
   only when a ``h2mare_manifest.json`` exists in the input directory (created
   automatically by CMEMSDownloader after a download run).

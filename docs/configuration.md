@@ -1,20 +1,10 @@
 # Configuration
 
-H2GIS is configured through two files: `config.yaml` (variable definitions and processing parameters) and `.env` (paths and credentials).
+H2MARE is configured through two files: `config.yaml` (variable definitions and processing parameters) and `.env` (paths and credentials).
 
 ---
 
 ## config.yaml
-
-### Spatial parameters
-
-```yaml
-spatial:
-  geo_extent: [-80, 0, 10, 70]   # [xmin, ymin, xmax, ymax] in degrees
-  depth_range: [0, 1000]         # depth range for O2 variables (metres)
-  dx: 0.25                       # output grid resolution (degrees)
-  dy: 0.25
-```
 
 ### Variable entries
 
@@ -23,7 +13,7 @@ Each key under `variables:` defines one data stream:
 ```yaml
 variables:
   sst:
-    local_folder: CMEMS_SST           # subdirectory under STORE_DIR
+    local_folder: CMEMS_SST           # subdirectory under STORE_ROOT
     variables: [analysed_sst, ...]    # variable names inside the source file
     dataset_id_rep: <cmems-id>        # reprocessed (multiyear) dataset ID
     dataset_id_nrt: <cmems-id>        # near-real-time dataset ID (optional)
@@ -31,18 +21,19 @@ variables:
     pattern: "(\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})"  # filename date pattern
     subset: true                      # spatial subset on download
     bbox: [-80, 0, 10, 70]           # [xmin, ymin, xmax, ymax]
+    depth_range: [0.0, 500.0]        # [min_depth, max_depth]
 ```
 
 | Field | Required | Description |
 |---|---|---|
-| `local_folder` | yes | Subdirectory under `STORE_DIR` for this variable's Zarr files |
+| `local_folder` | yes | Subdirectory under `STORE_ROOT` for this variable's Zarr files |
 | `variables` | yes | Variable names to extract from source files |
 | `dataset_id_rep` | yes | Reprocessed dataset identifier |
 | `dataset_id_nrt` | no | Near-real-time dataset identifier. Omit for reanalysis-only products |
 | `source` | yes | Provider: `cmems`, `aviso`, or `cds` |
 | `pattern` | yes | Regex for extracting date ranges from raw filenames |
 | `subset` | no | Whether to spatially subset on download (default `false`) |
-| `bbox` | no | Bounding box for subset. Falls back to `spatial.geo_extent` |
+| `bbox` | no | Bounding box for subset. If omitted, the full available extent is downloaded |
 | `depth_range` | no | Depth range for 3D variables (e.g. `o2`) |
 
 ### The `h2ds` key
@@ -65,7 +56,7 @@ The `bbox` here sets the spatial extent of the compiled dataset.
 
 | Variable | Required | Description |
 |---|---|---|
-| `STORE_DIR` | yes | Root path for Zarr output (can be an external drive) |
+| `STORE_ROOT` | yes | Root path for Zarr output (can be an external drive) |
 | `CMEMS_USERNAME` | CMEMS only | Copernicus Marine account username |
 | `CMEMS_PASSWORD` | CMEMS only | Copernicus Marine account password |
 | `AVISO_USERNAME` | AVISO only | AVISO account username |

@@ -217,7 +217,7 @@ class Extractor:
             lon_col (str, optional): Name of longitude column. Defaults to "lon".
             lat_col (str, optional): Name of latitude column. Defaults to "lat".
             app_config (AppConfig, optional): Dataclass with environmental data specifics. Defaults to cfg.
-            store_root (Union[str, Path], optional): Path for environmental data main folder. Defaults to STORE_DIR.
+            store_root (Union[str, Path], optional): Path for environmental data main folder. Defaults to STORE_ROOT.
             crs (int | None, optional): Projection EPSG code for geometry extraction. Defaults to 4326.
 
         """
@@ -230,7 +230,7 @@ class Extractor:
         self.app_config = app_config or settings.app_config
 
         self.store_root = (
-            Path(store_root) if store_root is not None else settings.STORE_DIR
+            Path(store_root) if store_root is not None else settings.STORE_ROOT
         )
 
         data_orig = self._resolve_file_format(file_path)

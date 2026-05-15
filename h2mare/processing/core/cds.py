@@ -392,7 +392,7 @@ def add_engineered_ekman(da: xr.DataArray):
     Args:
         da: (xarray.DataArray) DataArray with variable 'ekman_pumping'
     """
-    store_dir = settings.STORE_DIR
+    store_dir = settings.STORE_ROOT
     if store_dir is not None:
         clim_dir = store_dir / "Climatology"
     else:

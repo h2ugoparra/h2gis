@@ -29,7 +29,7 @@ Extractor(
 |---|---|---|
 | `var_key` | `"h2ds"` | Variable key to extract from |
 | `app_config` | settings | Override the application configuration |
-| `store_root` | `STORE_DIR` | Root directory of Zarr stores |
+| `store_root` | `STORE_ROOT` | Root directory of Zarr stores |
 
 ---
 
